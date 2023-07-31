@@ -15,18 +15,32 @@ load_interfaces() {
 	[ "${enable}" = "1" ] && interfaces=" ${interface} ${interfaces}"
 }
 
+validate_section_global() {
+	uci_load_validate "${NAME}" global "$1" "$2" \
+		'enable:bool:0' \
+		'def_tcp_stun:hostname' \
+		'def_udp_stun:hostname' \
+		'def_http_server:hostname' \
+		'def_interval:and(uinteger, min(1)):10' \
+		'test_port:and(port, min(1))'
+}
+
 validate_section_natmap() {
 	uci_load_validate "${NAME}" natmap "$1" "$2" \
 		'enable:bool:0' \
-		'family:string' \
+		'interval:and(uinteger, min(1))' \
+		'stun_server:hostname' \
+		'http_server:hostname' \
+		'comment:string' \
 		'udp_mode:bool:0' \
-		'interface:string' \
-		'interval:uinteger' \
-		'stun_server:host' \
-		'http_server:host' \
-		'port:port' \
+		'family:or("ipv4", "ipv6"):ipv4' \
+		'interface:network' \
+		'port:and(port, min(1))' \
+		'forward_mode:bool:0' \
+		'forward_method:or("dnat", "via"):via' \
+		'natloopback:bool:1' \
 		'forward_target:host' \
-		'forward_port:port' \
+		'forward_port:and(port, min(1))' \
 		'notify_script:file'
 }
 
