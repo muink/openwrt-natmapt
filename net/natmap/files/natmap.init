@@ -1,12 +1,22 @@
 #!/bin/sh /etc/rc.common
 
-START=99
+. "${IPKG_INSTROOT}/lib/functions/network.sh"
+
+START=72
+STOP=90
 USE_PROCD=1
 
+# natmap
+[ -x "$(command -v  nft)" ] && FW='fw4' || FW='fw3'
 NAME=natmap
+GLOBALSECTION=global
+NATMAPSECTION=natmap
 PROG=/usr/bin/$NAME
 
 STATUS_PATH=/var/run/natmap
+
+config_load "$NAME"
+
 
 load_interfaces() {
 	config_get interface "$1" interface
@@ -15,8 +25,22 @@ load_interfaces() {
 	[ "${enable}" = "1" ] && interfaces=" ${interface} ${interfaces}"
 }
 
+# define global var: GLOBAL_*
+define_global() {
+	[ "$2" == "0" ] || { >&2 echo "$(basename $0): section $1 validation failed"; return 1; }
+
+	local error=0
+	local v ucivv="enable def_tcp_stun def_udp_stun def_http_server def_interval"
+	for v in $ucivv; do
+		[ -z "$(config_get $1 $v)" ] && >&2 echo "$(basename $0): section $1 option $v cannot be empty" && let error++
+		eval "config_get GLOBAL_$v \$1 \$v"
+	done
+
+	[ "$error" -gt 0 ] && return 1 || return 0
+}
+
 validate_section_global() {
-	uci_load_validate "${NAME}" global "$1" "$2" \
+	uci_load_validate "$NAME" "$GLOBALSECTION" "$1" "$2" \
 		'enable:bool:0' \
 		'def_tcp_stun:hostname' \
 		'def_udp_stun:hostname' \
@@ -26,7 +50,7 @@ validate_section_global() {
 }
 
 validate_section_natmap() {
-	uci_load_validate "${NAME}" natmap "$1" "$2" \
+	uci_load_validate "$NAME" "$NATMAPSECTION" "$1" "$2" \
 		'enable:bool:0' \
 		'interval:and(uinteger, min(1))' \
 		'stun_server:hostname' \
@@ -84,6 +108,7 @@ natmap_instance() {
 }
 
 clear_status_files() {
+	mkdir -p "${STATUS_PATH}" 2>/dev/null
 	find "${STATUS_PATH}" -type f -print0 | xargs -0 rm -f --
 }
 
@@ -92,7 +117,6 @@ service_triggers() {
 
 	procd_add_reload_trigger "${NAME}"
 
-	config_load "${NAME}"
 	config_foreach load_interfaces natmap
 
 	[ -n "${interfaces}" ] && {
@@ -105,12 +129,12 @@ service_triggers() {
 }
 
 start_service() {
-	. /lib/functions/network.sh
 
-	mkdir -p "${STATUS_PATH}"
 	clear_status_files
 
-	config_load "${NAME}"
+	config_foreach validate_section_global "$GLOBALSECTION" define_global || return $?
+	[ "${GLOBAL_enable:=0}" == "0" ] && return 1
+
 	config_foreach validate_section_natmap natmap natmap_instance
 }
 
