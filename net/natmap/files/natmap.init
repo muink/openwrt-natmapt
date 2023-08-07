@@ -69,12 +69,7 @@ validate_section_natmap() {
 }
 
 natmap_instance() {
-	[ "$2" = 0 ] || {
-		echo "validation failed"
-		return 1
-	}
-
-	[ "${enable}" = 0 ] && return 1
+	[ "${enable}" = 0 ] && return 0
 
 	procd_open_instance "$1"
 	procd_set_param command "$PROG" \
@@ -112,6 +107,18 @@ clear_status_files() {
 	find "${STATUS_PATH}" -type f -print0 | xargs -0 rm -f --
 }
 
+launcher() {
+	[ "$2" = 0 ] || { >&2 echo "$(basename $0): section $1 validation failed"; return 1; }
+	# global options
+	[ "$udp_mode" = 1 ] \
+		&& echo ${stun_server:=$GLOBAL_def_udp_stun} >/dev/null \
+		|| echo ${stun_server:=$GLOBAL_def_tcp_stun} >/dev/null
+	echo ${http_server:=$GLOBAL_def_http_server} \
+	${interval:=$GLOBAL_def_interval} >/dev/null
+
+	natmap_instance "$1"
+}
+
 service_triggers() {
 	local interfaces
 
@@ -135,7 +142,7 @@ start_service() {
 	config_foreach validate_section_global "$GLOBALSECTION" define_global || return $?
 	[ "${GLOBAL_enable:=0}" == "0" ] && return 1
 
-	config_foreach validate_section_natmap natmap natmap_instance
+	config_foreach validate_section_natmap "$NATMAPSECTION" launcher
 }
 
 reload_service() {
