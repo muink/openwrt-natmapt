@@ -32,7 +32,7 @@ define_global() {
 	local error=0
 	local v ucivv="enable def_tcp_stun def_udp_stun def_http_server def_interval"
 	for v in $ucivv; do
-		[ -z "$(config_get $1 $v)" ] && >&2 echo "$(basename $0): section $1 option $v cannot be empty" && let error++
+		[ -z "$(config_get $1 $v)" ] && err_msg__empty $1 $v && let error++
 		eval "config_get GLOBAL_$v \$1 \$v"
 	done
 
@@ -105,6 +105,11 @@ natmap_instance() {
 clear_status_files() {
 	mkdir -p "${STATUS_PATH}" 2>/dev/null
 	find "${STATUS_PATH}" -type f -print0 | xargs -0 rm -f --
+}
+
+# err_msg__empty <section> <option>
+err_msg__empty() {
+	>&2 echo "$(basename $0): section $1 option $2 cannot be empty"
 }
 
 launcher() {
