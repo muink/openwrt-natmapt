@@ -120,6 +120,17 @@ launcher() {
 		|| echo ${stun_server:=$GLOBAL_def_tcp_stun} >/dev/null
 	echo ${http_server:=$GLOBAL_def_http_server} \
 	${interval:=$GLOBAL_def_interval} >/dev/null
+	# natmap options
+	local error=0
+	#[ -z "$interface" ] && default gateway
+	[ -z "$port" ] && err_msg__empty $1 port && let error++
+	if   [ "$forward_mode" = 1 ]; then
+		[ -z "$forward_target" ] && err_msg__empty $1 forward_target && let error++
+		[ -z "$forward_port" ] && err_msg__empty $1 forward_port && let error++
+	elif [ "$forward_mode" = 0 ]; then
+		unset forward_target forward_port
+	fi
+	[ "$error" -gt 0 ] && return 1
 
 	natmap_instance "$1"
 }
