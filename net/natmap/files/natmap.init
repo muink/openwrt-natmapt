@@ -59,10 +59,12 @@ define_nic() {
 define_nic
 
 load_interfaces() {
-	config_get interface "$1" interface
-	config_get enable "$1" enable 1
+	local bind_ifname enable
 
-	[ "${enable}" = "1" ] && interfaces=" ${interface} ${interfaces}"
+	config_get bind_ifname "$1" bind_ifname
+	config_get enable "$1" enable 0
+
+	[ "$enable" = 1 ] && interfaces=" $(uci -q show network|grep "device='$bind_ifname'"|cut -f2 -d'.') $interfaces"
 }
 
 # define global var: GLOBAL_*
@@ -98,7 +100,7 @@ validate_section_natmap() {
 		'comment:string' \
 		'udp_mode:bool:0' \
 		'family:or("ipv4", "ipv6"):ipv4' \
-		'interface:network' \
+		'bind_ifname:network' \
 		'port:and(port, min(1))' \
 		'forward_mode:bool:0' \
 		'forward_method:or("dnat", "via"):via' \
@@ -122,12 +124,14 @@ natmap_instance() {
 	[ "${family}" = ipv6 ] && procd_append_param command -6
 	[ "${udp_mode}" = 1 ] && procd_append_param command -u
 
-	[ -n "${interface}" ] && {
+	procd_set_param netdev "br-lan"
+	[ -n "${bind_ifname}" ] && {
+		procd_append_param command -i "$bind_ifname"
+		procd_append_param netdev "$bind_ifname"
+	} || {
 		local ifname
-
-		network_get_device ifname "$interface" || ifname="$interface"
-		procd_append_param command -i "$ifname"
-		procd_append_param netdev "$ifname"
+		network_get_device ifname "$DEF_WAN" && procd_append_param netdev "$ifname"
+		network_get_device ifname "$DEF_WAN6" && procd_append_param netdev "$ifname"
 	}
 
 	[ -n "${forward_target}" ] && procd_append_param command -t "$forward_target" -p "$forward_port"
@@ -162,7 +166,7 @@ launcher() {
 	${interval:=$GLOBAL_def_interval} >/dev/null
 	# natmap options
 	local error=0
-	#[ -z "$interface" ] && default gateway
+	#[ -z "$bind_ifname" ] && default gateway
 	[ -z "$port" ] && err_msg__empty $1 port && let error++
 	if   [ "$forward_mode" = 1 ]; then
 		[ -z "$forward_target" ] && err_msg__empty $1 forward_target && let error++
@@ -176,14 +180,24 @@ launcher() {
 }
 
 service_triggers() {
+	procd_add_reload_trigger "$NAME" 'network' 'firewall'
+
 	local interfaces
 
-	procd_add_reload_trigger "${NAME}"
+	config_foreach load_interfaces $NATMAPSECTION
+	[ -n "$interfaces" ] && {
+		for n in $interfaces; do
+			procd_add_reload_interface_trigger $n
+		done
+	} || {
+		for n in $DEF_WAN $DEF_WAN6; do
+			procd_add_reload_interface_trigger $n
+		done
+	}
 
-	config_foreach load_interfaces natmap
-
-	[ -n "${interfaces}" ] && {
-		for n in $interfaces ; do
+	interfaces=$(uci show network|grep "device='br-lan'"|cut -f2 -d'.')
+	[ -n "$interfaces" ] && {
+		for n in $interfaces; do
 			procd_add_reload_interface_trigger $n
 		done
 	}
