@@ -105,9 +105,26 @@ validate_section_natmap() {
 		'forward_mode:bool:0' \
 		'forward_method:or("dnat", "via"):via' \
 		'natloopback:bool:1' \
-		'forward_target:host' \
+		'forward_target:ipaddr(1)' \
 		'forward_port:and(port, min(1))' \
 		'notify_script:file'
+}
+
+# ip_match <family> <ipaddr>
+ip_match() {
+	[ "$#" -ge 2 ] || return 1
+	local _family="$1" && shift
+	local _ip="$1" && shift
+
+	case "$_family" in
+		ipv4)
+			echo "$_ip" | grep -E "^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$"
+		;;
+		ipv6)
+			echo "$_ip" | grep -E "^(([[:xdigit:]]{1,4}:){7}[[:xdigit:]]{1,4}|([[:xdigit:]]{1,4}:){1,7}:|([[:xdigit:]]{1,4}:){1,6}:[[:xdigit:]]{1,4}|([[:xdigit:]]{1,4}:){1,5}(:[[:xdigit:]]{1,4}){1,2}|([[:xdigit:]]{1,4}:){1,4}(:[[:xdigit:]]{1,4}){1,3}|([[:xdigit:]]{1,4}:){1,3}(:[[:xdigit:]]{1,4}){1,4}|([[:xdigit:]]{1,4}:){1,2}(:[[:xdigit:]]{1,4}){1,5}|[[:xdigit:]]{1,4}:(:[[:xdigit:]]{1,4}){1,6}|:((:[[:xdigit:]]{1,4}){1,7}|:)|\
+fe80:(:[[:xdigit:]]{0,4}){0,4}%\w+|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)|([[:xdigit:]]{1,4}:){1,4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?))$"
+		;;
+	esac
 }
 
 natmap_instance() {
@@ -172,7 +189,7 @@ launcher() {
 		ipv4) network_get_device ifname "$DEF_WAN";;
 		ipv6) network_get_device ifname "$DEF_WAN6";;
 	esac
-	echo ${bind_ifname:=$ifname} >/dev/null
+	[ -z "${bind_ifname:=$ifname}" ] && >&2 echo "$(basename $0): section $1 option bind_ifname parsing failed, there may be no $family network connection" && let error++
 	case "$family" in
 		ipv4)
 			eval "bind_ip=\"\${NIC_${bind_ifname//-/_}%/*}\""
@@ -187,7 +204,17 @@ launcher() {
 	if   [ "$forward_mode" = 1 ]; then
 		[ "$forward_method" = "dnat" -a "$family" = "ipv6" ] && >&2 echo "$(basename $0): section $1 option forward_method 'dnat' not support under IPv6" && let error++
 		[ "$forward_method" != "dnat" ] && natloopback=0
-		[ -z "$forward_target" ] && err_msg__empty $1 forward_target && let error++
+		if [ -n "$forward_target" ]; then
+			[ -n "$(echo $forward_target|grep -E "^127(\.\d+){3}")" -o "$forward_target" = "::1" ] && forward_target="$lan_addr"
+			[ -n "$(echo $forward_target|grep -E "^0(\.\d+){3}")" -o "$forward_target" = "::" ] && forward_target="$bind_ip"
+			if [ -n "$forward_target" ]; then
+				[ -z "$(ip_match "$family" "$forward_target")" ] && >&2 echo "$(basename $0): section $1 option forward_target '$forward_target' not a $family address" && let error++
+			else
+				>&2 echo "$(basename $0): section $1 option forward_target parsing failed, there may be no $family network connection"; let error++
+			fi
+		else
+			err_msg__empty $1 forward_target; let error++
+		fi
 		[ -z "$forward_port" ] && err_msg__empty $1 forward_port && let error++
 	elif [ "$forward_mode" = 0 ]; then
 		natloopback=0
