@@ -166,12 +166,31 @@ launcher() {
 	${interval:=$GLOBAL_def_interval} >/dev/null
 	# natmap options
 	local error=0
-	#[ -z "$bind_ifname" ] && default gateway
+	local proto ifname bind_ip lan_addr
+	[ "$udp_mode" = 1 ] && proto=udp || proto=tcp
+	case "$family" in
+		ipv4) network_get_device ifname "$DEF_WAN";;
+		ipv6) network_get_device ifname "$DEF_WAN6";;
+	esac
+	echo ${bind_ifname:=$ifname} >/dev/null
+	case "$family" in
+		ipv4)
+			eval "bind_ip=\"\${NIC_${bind_ifname//-/_}%/*}\""
+			lan_addr="${NIC_br_lan%/*}"
+		;;
+		ipv6)
+			eval "bind_ip=\"\${NIC6_${bind_ifname//-/_}%/*}\""
+			lan_addr="${NIC6_br_lan%/*}"
+		;;
+	esac
 	[ -z "$port" ] && err_msg__empty $1 port && let error++
 	if   [ "$forward_mode" = 1 ]; then
+		[ "$forward_method" = "dnat" -a "$family" = "ipv6" ] && >&2 echo "$(basename $0): section $1 option forward_method 'dnat' not support under IPv6" && let error++
+		[ "$forward_method" != "dnat" ] && natloopback=0
 		[ -z "$forward_target" ] && err_msg__empty $1 forward_target && let error++
 		[ -z "$forward_port" ] && err_msg__empty $1 forward_port && let error++
 	elif [ "$forward_mode" = 0 ]; then
+		natloopback=0
 		unset forward_target forward_port
 	fi
 	[ "$error" -gt 0 ] && return 1
