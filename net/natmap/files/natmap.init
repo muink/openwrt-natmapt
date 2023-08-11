@@ -18,6 +18,46 @@ STATUS_PATH=/var/run/natmap
 config_load "$NAME"
 
 
+# define global var: DEF_WAN DEF_WAN6 NIC_* NIC6_*
+define_nic() {
+	local dev sub addr
+	# get all active NICs
+	for dev in $(ip -o link|sed -En "s|^\d:\s*([^:]+):.*|\1|gp"); do
+		#ipv4
+		sub=$(ip -o -4 addr|sed -En "s|.*${dev}\s+inet\s+([0-9\./]+).*|\1|gp")
+		eval "NIC_${dev//-/_}=\"\$sub\""
+		#ipv6
+		sub=$(ip -o -6 addr|sed -En "s|.*${dev}\s+inet6\s+([A-Za-z0-9\./:]+).*|\1|gp")
+		# ref: https://github.com/openwrt/openwrt/blob/main/package/base-files/files/lib/functions/network.sh#L53 #network_get_subnet6()
+		for _ in $sub; do
+			for addr in $sub; do
+				case "$addr" in fe[8ab]?:*|f[cd]??:*)
+					continue
+				esac
+				sub=$addr; break
+			done
+			# Attempt to return first non-fe80::/10 range
+			for addr in $sub; do
+				case "$addr" in fe[8ab]?:*)
+					continue
+				esac
+				sub=$addr; break
+			done
+			# Return first item
+			for addr in $sub; do
+				sub=$addr; break
+			done
+		done
+		eval "NIC6_${dev//-/_}=\"\$sub\""
+	done
+	# get default gateway 0.0.0.0/::
+	network_find_wan DEF_WAN true
+	network_find_wan6 DEF_WAN6 true
+
+	return 0
+}
+define_nic
+
 load_interfaces() {
 	config_get interface "$1" interface
 	config_get enable "$1" enable 1
