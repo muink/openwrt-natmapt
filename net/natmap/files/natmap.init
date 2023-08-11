@@ -220,6 +220,12 @@ launcher() {
 		natloopback=0
 		unset forward_target forward_port
 	fi
+	# review
+	[ 0 = 1 ] && {
+		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward_mode forward_method natloopback forward_target forward_port"
+		for v in $ucivv; do eval "echo $1 $v=\'\$$v\'"; done # ash not support ${!v}
+		return 0
+	}
 	[ "$error" -gt 0 ] && return 1
 
 	natmap_instance "$1"
