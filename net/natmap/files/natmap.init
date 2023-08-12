@@ -1,6 +1,9 @@
 #!/bin/sh /etc/rc.common
 
+. "${IPKG_INSTROOT}/lib/functions.sh"
+. "${IPKG_INSTROOT}/lib/functions/procd.sh"
 . "${IPKG_INSTROOT}/lib/functions/network.sh"
+. "${IPKG_INSTROOT}/usr/share/libubox/jshn.sh"
 
 START=97
 STOP=90
@@ -113,8 +116,8 @@ validate_section_natmap() {
 # ip_match <family> <ipaddr>
 ip_match() {
 	[ "$#" -ge 2 ] || return 1
-	local _family="$1" && shift
-	local _ip="$1" && shift
+	local _family="$1"
+	local _ip="$2"
 
 	case "$_family" in
 		ipv4)
