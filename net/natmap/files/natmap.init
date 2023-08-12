@@ -248,7 +248,7 @@ case "$FW" in
 		if   [ "$_type" == "input" ]; then
 			#ref:                 input_wan [ iifname "<wan_device: e.g. eth1>" | <ip|ip6> daddr <wan_addr: e.g. 100.64.0.1> ] meta nfproto <nfprotocol> <protocol> dport <bind_port> counter packets 0 bytes 0 accept [ comment "\"comment...\"" ]
 			nft add rule inet fw4 natmap_input iifname "\"$_bind_ifname\"" meta nfproto $_family $_proto dport ${_bind_port} counter packets 0 bytes 0 accept comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port}\""
-		elif [ "$_type" == "dnat" ]; then
+		elif [ "$_type" == "dnat" -a "$_family" == "ipv4" ]; then
 			#ref:                 dstnat_wan [ iifname "<wan_device: e.g. eth1>" | ip daddr <wan_addr: e.g. 100.64.0.1> ] meta nfproto ipv4 <protocol> dport <bind_port> counter packets 0 bytes 0 dnat ip to <intenal_server_ip>:<intenal_server_port> [ comment "\"comment...\"" ]
 			nft add rule inet fw4 natmap_prerouting iifname "\"$_bind_ifname\"" meta nfproto ipv4 $_proto dport ${_bind_port} counter packets 0 bytes 0 dnat ip to ${_server_ip}:${_server_port} comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port}\""
 			#loopback
@@ -258,6 +258,8 @@ case "$FW" in
 			#ref:                 dstnat_lan iifname "\"br-lan\"" ip saddr <lan_subnet: e.g. 192.168.1.0/24> ip daddr <wan_addr: e.g. 100.64.0.1> <protocol> dport <bind_port> dnat ip to <intenal_server_ip>:<intenal_server_port> [ comment "\"comment...\"" ]
 			nft add rule inet fw4 natmap_preloopback iifname "\"$lan\"" ip saddr $lan_subnet ip daddr ${_bind_ip} $_proto dport ${_bind_port} dnat ip to ${_server_ip}:${_server_port} comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port} (reflection)\""
 			fi
+		else
+			return 1
 		fi
 	;;
 	fw3)
@@ -265,9 +267,9 @@ case "$FW" in
 			#ref:    -t filter -A zone_wan_input [ -i <wan_device: e.g. eth1> | -d <wan_addr: e.g. 100.64.0.1>/32 ] -p <protocol> -m <protocol> --dport <bind_port> [ -m comment --comment "comment..." ] -j ACCEPT
 			case "$_family" in
 				ipv4) iptables -t filter -A NATMAP -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j ACCEPT;;
-				ipv6) [ -x /usr/sbin/ip6tables ] && ip6tables -t filter -A NATMAP -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j ACCEPT;;
+				ipv6) [ -x /usr/sbin/ip6tables ] && ip6tables -t filter -A NATMAP -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j ACCEPT || return 1;;
 			esac
-		elif [ "$_type" == "dnat" ]; then
+		elif [ "$_type" == "dnat" -a "$_family" == "ipv4" ]; then
 			#ref:    -t nat -A zone_wan_prerouting [ -i <wan_device: e.g. eth1> | -d <wan_addr: e.g. 100.64.0.1>/32 ] -p <protocol> -m <protocol> --dport <bind_port> [ -m comment --comment "comment..." ] -j DNAT --to-destination <intenal_server_ip>:<intenal_server_port>
 			iptables -t nat -A NATMAP-PREROUTING -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j DNAT --to-destination ${_server_ip}:${_server_port}
 			#loopback
@@ -277,6 +279,8 @@ case "$FW" in
 			#ref:    -t nat -A zone_lan_prerouting -s <lan_subnet: e.g. 192.168.1.0/24> -d <wan_addr: e.g. 100.64.0.1>/32 -p <protocol> -m <protocol> --dport <bind_port> [ -m comment --comment "comment..." ] -j DNAT --to-destination <intenal_server_ip>:<intenal_server_port>
 			iptables -t nat -A NATMAP-PRELOOPBACK -s $lan_subnet -d ${_bind_ip}/32 -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port} (reflection)" -j DNAT --to-destination ${_server_ip}:${_server_port}
 			fi
+		else
+			return 1
 		fi
 	;;
 esac
@@ -299,12 +303,14 @@ case "$FW" in
 	fw4)
 		if   [ "$_type" == "input" ]; then
 			order="${order:+$order }'fw4:natmap_input'"
-		elif [ "$_type" == "dnat" ]; then
+		elif [ "$_type" == "dnat" -a "$_family" == "ipv4" ]; then
 			order="${order:+$order }'fw4:natmap_prerouting'"
 			#loopback
 			if [ "$_loopback" == "1" ]; then
 				order="${order:+$order }'fw4:natmap_postloopback' 'fw4:natmap_preloopback'"
 			fi
+		else
+			return 1
 		fi
 		for o in $order; do
 			tab="${o%%:*}"; tab="${tab#\'}"
@@ -351,7 +357,7 @@ case "$FW" in
 							ip6tables -t $tab -D $chain $num
 						}
 					done
-				}
+				} || return 1
 			;;
 		esac
 	;;
