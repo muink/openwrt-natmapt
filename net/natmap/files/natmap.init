@@ -127,6 +127,78 @@ fe80:(:[[:xdigit:]]{0,4}){0,4}%\w+|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|2[0-4]\
 	esac
 }
 
+# format_subnet <destination variable> <subnet>
+# <subnet> format: 192.168.1.1/24
+format_subnet() {
+[ "$#" -ge 2 ] || return 1
+
+local insubnet="$2"
+local address=${insubnet%/*}
+local mlen=${insubnet#*/}
+local FULL_MASK_INT=$((0xFFFFFFFF))
+local MASK_LEN=$mlen
+local LEFT_MOVE="$(( 32 - ${MASK_LEN} ))"
+local N="$(( ${FULL_MASK_INT} << ${LEFT_MOVE} ))"
+local M1="$(( ($N & 0xFF000000) >> 24 ))"
+local M2="$(( ($N & 0x00FF0000) >> 16 ))"
+local M3="$(( ($N & 0x0000FF00) >> 8 ))"
+local M4="$((  $N & 0x000000FF ))"
+#local mask="$M1.$M2.$M3.$M4"
+local outsubnet="$(echo $(for i in $(seq 1 4); do eval "echo \$(( \$(echo $address|cut -f$i -d'.') & \$M$i ))"; done)|sed 's| |.|g')/$mlen"
+eval "$1=\$outsubnet"
+}
+
+# format_subnet6 <destination variable> <subnet6>
+# <subnet6> format: fc02:2f31:3376::345/60
+format_subnet6() {
+[ "$#" -ge 2 ] || return 1
+
+local insubnet="$2"
+local address=${insubnet%/*}
+local mlen=${insubnet#*/}
+# ipv4 suffix format
+local ipv4_suffix=$(echo ${address}|sed -En "s|.+:(\d+(\.\d+){3})$|\1|p")
+if [ -n "$ipv4_suffix" ]; then
+address=\
+$(echo $address|sed "s|$ipv4_suffix|\
+$(printf %x $(( $(echo $ipv4_suffix|cut -f1 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
+$(printf %x $(( $(echo $ipv4_suffix|cut -f2 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
+:\
+$(printf %x $(( $(echo $ipv4_suffix|cut -f3 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
+$(printf %x $(( $(echo $ipv4_suffix|cut -f4 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
+|")
+fi
+# double colon
+if [ -n "$(echo $address|grep '::')" ]; then
+local blocks=$(( 8 - $(echo $address|awk '{print gsub(/[[:xdigit:]]+/,"&")}') ))
+address=\
+$(echo $address|sed "s|::|:\
+$(for i in $(seq 1 $blocks); do echo 0:; done|tr -d '\n')\
+|")
+address=${address#:}; address=${address%:}
+fi
+local HALF_MASK_INT=$((0xFFFFFFFFFFFFFFFF))
+local MASK_LEN=$mlen
+local H_MASK=$([ "$MASK_LEN" -lt  "64" ] && echo     $MASK_LEN                             || echo 64)
+local L_MASK=$([ "$MASK_LEN" -lt "128" ] && echo $(( $MASK_LEN - 64 )) | sed '/-/ s|.*|0|' || echo 64)
+local H_LEFT_MOVE=$(( 64 - $H_MASK ))
+local L_LEFT_MOVE=$(( 64 - $L_MASK ))
+local H_N L_N
+[ "${H_LEFT_MOVE}" -eq "64" ] && H_N=0 || H_N="$(( ${HALF_MASK_INT} << ${H_LEFT_MOVE} ))"
+[ "${L_LEFT_MOVE}" -eq "64" ] && L_N=0 || L_N="$(( ${HALF_MASK_INT} << ${L_LEFT_MOVE} ))"
+local M1="$(( (($H_N & 0xFFFF000000000000) >> 48 ) & 0xFFFF ))"
+local M2="$((  ($H_N & 0x0000FFFF00000000) >> 32 ))"
+local M3="$((  ($H_N & 0x00000000FFFF0000) >> 16 ))"
+local M4="$((   $H_N & 0x000000000000FFFF  ))"
+local M5="$(( (($L_N & 0xFFFF000000000000) >> 48 ) & 0xFFFF ))"
+local M6="$((  ($L_N & 0x0000FFFF00000000) >> 32 ))"
+local M7="$((  ($L_N & 0x00000000FFFF0000) >> 16 ))"
+local M8="$((   $L_N & 0x000000000000FFFF ))"
+#local mask="$M1:$M2:$M3:$M4:$M5:$M6:$M7:$M8"
+local outsubnet="$(echo $(for i in $(seq 1 8); do eval "printf %x \$(( 0x\$(echo $address|cut -f$i -d':') & \$M$i ))"; echo ''; done)|sed 's| |:|g')/$mlen"
+eval "$1=\$(echo \$outsubnet|sed -E 's|:(0+:)+|::|;s|^0::|::|;s|::0/|::/|')"
+}
+
 natmap_instance() {
 	[ "${enable}" = 0 ] && return 0
 
