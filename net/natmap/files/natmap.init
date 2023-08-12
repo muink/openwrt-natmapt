@@ -2,7 +2,7 @@
 
 . "${IPKG_INSTROOT}/lib/functions/network.sh"
 
-START=72
+START=97
 STOP=90
 USE_PROCD=1
 

@@ -1,0 +1,8 @@
+#!/bin/sh
+# natmap integration for firewall4
+
+#nft list tables
+#nft list table inet fw4
+
+/etc/init.d/natmap enabled && /etc/init.d/natmap reload
+exit 0

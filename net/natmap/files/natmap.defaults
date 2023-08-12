@@ -1,0 +1,17 @@
+#!/bin/sh
+NAME='natmap'
+[ -x "$(command -v nft)" ] && FW='fw4' || FW='fw3'
+uci -q batch <<-EOF
+	delete firewall.$NAME
+	set firewall.$NAME=include
+	set firewall.$NAME.type=script
+	set firewall.$NAME.path=/usr/share/natmap/$FW.include
+	commit firewall
+EOF
+if [ "$FW" == "fw3" ]; then
+uci -q batch <<-EOF
+	set firewall.$NAME.family=any
+	set firewall.$NAME.reload=1
+	commit firewall
+EOF
+fi
