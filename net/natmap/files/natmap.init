@@ -390,7 +390,8 @@ natmap_instance() {
 
 	[ -n "${forward_target}" ] && procd_append_param command -t "$forward_target" -p "$forward_port"
 
-	[ -n "${notify_script}" ] && procd_set_param env "NOTIFY_SCRIPT=${notify_script}"
+	procd_set_param env "SECTIONID=$1"
+	[ -n "${notify_script}" ] && procd_append_param env "NOTIFY_SCRIPT=${notify_script}"
 	procd_append_param command -e /usr/lib/natmap/update.sh
 
 	procd_set_param respawn
