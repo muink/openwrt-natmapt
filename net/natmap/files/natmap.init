@@ -106,7 +106,7 @@ validate_section_natmap() {
 		'forward_method:or("dnat", "via"):via' \
 		'natloopback:bool:1' \
 		'forward_target:ipaddr(1)' \
-		'forward_port:and(port, min(1))' \
+		'forward_port:port' \
 		'notify_script:file'
 }
 
@@ -163,7 +163,7 @@ natmap_instance() {
 	procd_open_data
 	# configure firewall
 	json_add_array firewall
-		if [ "$forward_mode" = 1 -a "$forward_method" = "dnat" ]; then
+		if [ "$forward_mode" = 1 -a "$forward_method" = "dnat" -a "$forward_port" != 0 ]; then
 			json_add_object ''
 			json_add_string type redirect
 			json_add_string target DNAT
