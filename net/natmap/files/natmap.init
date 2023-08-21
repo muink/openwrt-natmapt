@@ -106,7 +106,7 @@ validate_section_natmap() {
 		'forward_method:or("dnat", "via"):via' \
 		'natloopback:bool:1' \
 		'forward_target:ipaddr(1)' \
-		'forward_port:and(port, min(1))' \
+		'forward_port:port' \
 		'notify_script:file'
 }
 
@@ -468,7 +468,7 @@ launcher() {
 	[ "$error" -gt 0 ] && return 1
 
 	# configure firewall
-	if [ "$forward_mode" = 1 -a "$forward_method" = "dnat" ]; then
+	if [ "$forward_mode" = 1 -a "$forward_method" = "dnat" -a "$forward_port" != 0 ]; then
 		write_fw_rule "$family" 'dnat' "$1" "$natloopback" "$proto" "$bind_ifname" "$bind_ip" "$port" "$forward_target" "$forward_port" || return 1
 	fi
 	if [ "$forward_mode" = 1 -a "$forward_method" = "via" -o "$forward_mode" = 0 ]; then
