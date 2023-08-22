@@ -1,2 +1,0 @@
-jump natmap_preloopback comment "Hook into natmap dnat_loopback chain";
-jump natmap_prerouting comment "Hook into natmap dnat chain";

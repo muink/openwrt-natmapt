@@ -49,13 +49,6 @@ define Package/natmap/install
 	$(INSTALL_CONF) ./files/natmap.config $(1)/etc/config/natmap
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/natmap.init $(1)/etc/init.d/natmap
-	$(INSTALL_DIR) $(1)/usr/share/natmap
-	$(INSTALL_DATA) ./files/fw3.include $(1)/usr/share/natmap/fw3.include
-	$(INSTALL_DATA) ./files/fw4.include $(1)/usr/share/natmap/fw4.include
-	$(INSTALL_DIR) $(1)/usr/share/nftables.d
-	$(CP) ./files/nftables.d/* $(1)/usr/share/nftables.d/
-	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/natmap.defaults $(1)/etc/uci-defaults/97_natmap
 endef
 
 $(eval $(call BuildPackage,natmap))

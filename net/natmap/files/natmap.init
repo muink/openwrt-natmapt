@@ -113,8 +113,8 @@ validate_section_natmap() {
 # ip_match <family> <ipaddr>
 ip_match() {
 	[ "$#" -ge 2 ] || return 1
-	local _family="$1" && shift
-	local _ip="$1" && shift
+	local _family="$1"
+	local _ip="$2"
 
 	case "$_family" in
 		ipv4)
@@ -125,243 +125,6 @@ ip_match() {
 fe80:(:[[:xdigit:]]{0,4}){0,4}%\w+|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)|([[:xdigit:]]{1,4}:){1,4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?))$"
 		;;
 	esac
-}
-
-# format_subnet <destination variable> <subnet>
-# <subnet> format: 192.168.1.1/24
-format_subnet() {
-[ "$#" -ge 2 ] || return 1
-
-local insubnet="$2"
-local address=${insubnet%/*}
-local mlen=${insubnet#*/}
-local FULL_MASK_INT=$((0xFFFFFFFF))
-local MASK_LEN=$mlen
-local LEFT_MOVE="$(( 32 - ${MASK_LEN} ))"
-local N="$(( ${FULL_MASK_INT} << ${LEFT_MOVE} ))"
-local M1="$(( ($N & 0xFF000000) >> 24 ))"
-local M2="$(( ($N & 0x00FF0000) >> 16 ))"
-local M3="$(( ($N & 0x0000FF00) >> 8 ))"
-local M4="$((  $N & 0x000000FF ))"
-#local mask="$M1.$M2.$M3.$M4"
-local outsubnet="$(echo $(for i in $(seq 1 4); do eval "echo \$(( \$(echo $address|cut -f$i -d'.') & \$M$i ))"; done)|sed 's| |.|g')/$mlen"
-eval "$1=\$outsubnet"
-}
-
-# format_subnet6 <destination variable> <subnet6>
-# <subnet6> format: fc02:2f31:3376::345/60
-format_subnet6() {
-[ "$#" -ge 2 ] || return 1
-
-local insubnet="$2"
-local address=${insubnet%/*}
-local mlen=${insubnet#*/}
-# ipv4 suffix format
-local ipv4_suffix=$(echo ${address}|sed -En "s|.+:(\d+(\.\d+){3})$|\1|p")
-if [ -n "$ipv4_suffix" ]; then
-address=\
-$(echo $address|sed "s|$ipv4_suffix|\
-$(printf %x $(( $(echo $ipv4_suffix|cut -f1 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
-$(printf %x $(( $(echo $ipv4_suffix|cut -f2 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
-:\
-$(printf %x $(( $(echo $ipv4_suffix|cut -f3 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
-$(printf %x $(( $(echo $ipv4_suffix|cut -f4 -d'.') & 0xFF )) | sed -E 's|^(\d)$|0\1|')\
-|")
-fi
-# double colon
-if [ -n "$(echo $address|grep '::')" ]; then
-local blocks=$(( 8 - $(echo $address|awk '{print gsub(/[[:xdigit:]]+/,"&")}') ))
-address=\
-$(echo $address|sed "s|::|:\
-$(for i in $(seq 1 $blocks); do echo 0:; done|tr -d '\n')\
-|")
-address=${address#:}; address=${address%:}
-fi
-local HALF_MASK_INT=$((0xFFFFFFFFFFFFFFFF))
-local MASK_LEN=$mlen
-local H_MASK=$([ "$MASK_LEN" -lt  "64" ] && echo     $MASK_LEN                             || echo 64)
-local L_MASK=$([ "$MASK_LEN" -lt "128" ] && echo $(( $MASK_LEN - 64 )) | sed '/-/ s|.*|0|' || echo 64)
-local H_LEFT_MOVE=$(( 64 - $H_MASK ))
-local L_LEFT_MOVE=$(( 64 - $L_MASK ))
-local H_N L_N
-[ "${H_LEFT_MOVE}" -eq "64" ] && H_N=0 || H_N="$(( ${HALF_MASK_INT} << ${H_LEFT_MOVE} ))"
-[ "${L_LEFT_MOVE}" -eq "64" ] && L_N=0 || L_N="$(( ${HALF_MASK_INT} << ${L_LEFT_MOVE} ))"
-local M1="$(( (($H_N & 0xFFFF000000000000) >> 48 ) & 0xFFFF ))"
-local M2="$((  ($H_N & 0x0000FFFF00000000) >> 32 ))"
-local M3="$((  ($H_N & 0x00000000FFFF0000) >> 16 ))"
-local M4="$((   $H_N & 0x000000000000FFFF  ))"
-local M5="$(( (($L_N & 0xFFFF000000000000) >> 48 ) & 0xFFFF ))"
-local M6="$((  ($L_N & 0x0000FFFF00000000) >> 32 ))"
-local M7="$((  ($L_N & 0x00000000FFFF0000) >> 16 ))"
-local M8="$((   $L_N & 0x000000000000FFFF ))"
-#local mask="$M1:$M2:$M3:$M4:$M5:$M6:$M7:$M8"
-local outsubnet="$(echo $(for i in $(seq 1 8); do eval "printf %x \$(( 0x\$(echo $address|cut -f$i -d':') & \$M$i ))"; echo ''; done)|sed 's| |:|g')/$mlen"
-eval "$1=\$(echo \$outsubnet|sed -E 's|:(0+:)+|::|;s|^0::|::|;s|::0/|::/|')"
-}
-
-clean_fw_rules() {
-	if   [ "$FW" == "fw4" ]; then
-		nft flush chain inet fw4 natmap_input 2>/dev/null
-		nft flush chain inet fw4 natmap_prerouting 2>/dev/null
-		nft flush chain inet fw4 natmap_preloopback 2>/dev/null
-		nft flush chain inet fw4 natmap_postloopback 2>/dev/null
-	elif [ "$FW" == "fw3" ]; then
-		iptables -t filter -F NATMAP 2>/dev/null
-		iptables -t nat -F NATMAP-PREROUTING 2>/dev/null
-		iptables -t nat -F NATMAP-PRELOOPBACK 2>/dev/null
-		iptables -t nat -F NATMAP-POSTLOOPBACK 2>/dev/null
-		[ -x /usr/sbin/ip6tables ] && ip6tables -t filter -F NATMAP 2>/dev/null
-	fi
-}
-
-# write_fw_rule <family> <type> <id> <NAT loopback> <proto> <bind_ifname> <bind_ip> <bind_port> [server_ip] [server_port]
-write_fw_rule() {
-	[ "$#" -ge 8 ] || return 1
-	local _family="$1" && shift
-	local _type="$1" && shift
-	local _id="$1" && shift
-	local _loopback="$1" && shift
-	local _proto="$1" && shift
-	local _bind_ifname="$1" && shift
-	local _bind_ip="$1" && shift
-	local _bind_port="$1" && shift
-	[ "$#" -ge 2 ] && local _server_ip="$1" \
-				   && local _server_port="$2" && shift 2
-
-# iptables -t filter -N NATMAP 2>/dev/null
-# iptables -t nat -N NATMAP-PREROUTING 2>/dev/null
-# iptables -t nat -N NATMAP-PRELOOPBACK 2>/dev/null
-# iptables -t nat -N NATMAP-POSTLOOPBACK 2>/dev/null
-# [ -x /usr/sbin/ip6tables ] && ip6tables -t filter -N NATMAP 2>/dev/null
-# nft add chain inet fw4 natmap_input {}
-# nft add chain inet fw4 natmap_prerouting {}
-# nft add chain inet fw4 natmap_preloopback {}
-# nft add chain inet fw4 natmap_postloopback {}
-local lan='br-lan' lan_addr lan_addr6 lan_subnet lan_subnet6
-eval "lan_addr=\"\${NIC_${lan//-/_}%/*}\""
-eval "lan_addr6=\"\${NIC6_${lan//-/_}%/*}\""
-eval "format_subnet lan_subnet \"\${NIC_${lan//-/_}}\""
-eval "format_subnet6 lan_subnet6 \"\${NIC6_${lan//-/_}}\""
-
-case "$FW" in
-	fw4)
-		if   [ "$_type" == "input" ]; then
-			#ref:                 input_wan [ iifname "<wan_device: e.g. eth1>" | <ip|ip6> daddr <wan_addr: e.g. 100.64.0.1> ] meta nfproto <nfprotocol> <protocol> dport <bind_port> counter packets 0 bytes 0 accept [ comment "\"comment...\"" ]
-			nft add rule inet fw4 natmap_input iifname "\"$_bind_ifname\"" meta nfproto $_family $_proto dport ${_bind_port} counter packets 0 bytes 0 accept comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port}\""
-		elif [ "$_type" == "dnat" -a "$_family" == "ipv4" ]; then
-			#ref:                 dstnat_wan [ iifname "<wan_device: e.g. eth1>" | ip daddr <wan_addr: e.g. 100.64.0.1> ] meta nfproto ipv4 <protocol> dport <bind_port> counter packets 0 bytes 0 dnat ip to <intenal_server_ip>:<intenal_server_port> [ comment "\"comment...\"" ]
-			nft add rule inet fw4 natmap_prerouting iifname "\"$_bind_ifname\"" meta nfproto ipv4 $_proto dport ${_bind_port} counter packets 0 bytes 0 dnat ip to ${_server_ip}:${_server_port} comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port}\""
-			#loopback
-			if [ "$_loopback" == "1" ]; then
-			#ref:                 srcnat_lan oifname "\"br-lan\"" ip saddr <lan_subnet: e.g. 192.168.1.0/24> ip daddr <intenal_server_ip> <protocol> dport <intenal_server_port> snat ip to <lan_addr: e.g. 192.168.1.1> [ comment "\"comment...\"" ]
-			nft add rule inet fw4 natmap_postloopback oifname "\"$lan\"" ip saddr $lan_subnet ip daddr ${_server_ip} $_proto dport ${_server_port} snat ip to $lan_addr comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port} (reflection)\""
-			#ref:                 dstnat_lan iifname "\"br-lan\"" ip saddr <lan_subnet: e.g. 192.168.1.0/24> ip daddr <wan_addr: e.g. 100.64.0.1> <protocol> dport <bind_port> dnat ip to <intenal_server_ip>:<intenal_server_port> [ comment "\"comment...\"" ]
-			nft add rule inet fw4 natmap_preloopback iifname "\"$lan\"" ip saddr $lan_subnet ip daddr ${_bind_ip} $_proto dport ${_bind_port} dnat ip to ${_server_ip}:${_server_port} comment "\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port} (reflection)\""
-			fi
-		else
-			return 1
-		fi
-	;;
-	fw3)
-		if   [ "$_type" == "input" ]; then
-			#ref:    -t filter -A zone_wan_input [ -i <wan_device: e.g. eth1> | -d <wan_addr: e.g. 100.64.0.1>/32 ] -p <protocol> -m <protocol> --dport <bind_port> [ -m comment --comment "comment..." ] -j ACCEPT
-			case "$_family" in
-				ipv4) iptables -t filter -A NATMAP -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j ACCEPT;;
-				ipv6) [ -x /usr/sbin/ip6tables ] && ip6tables -t filter -A NATMAP -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j ACCEPT || return 1;;
-			esac
-		elif [ "$_type" == "dnat" -a "$_family" == "ipv4" ]; then
-			#ref:    -t nat -A zone_wan_prerouting [ -i <wan_device: e.g. eth1> | -d <wan_addr: e.g. 100.64.0.1>/32 ] -p <protocol> -m <protocol> --dport <bind_port> [ -m comment --comment "comment..." ] -j DNAT --to-destination <intenal_server_ip>:<intenal_server_port>
-			iptables -t nat -A NATMAP-PREROUTING -i $_bind_ifname -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}" -j DNAT --to-destination ${_server_ip}:${_server_port}
-			#loopback
-			if [ "$_loopback" == "1" ]; then
-			#ref:    -t nat -A zone_lan_postrouting -s <lan_subnet: e.g. 192.168.1.0/24> -d <intenal_server_ip>/32 -p <protocol> -m <protocol> --dport <intenal_server_port> [ -m comment --comment "comment..." ] -j SNAT --to-source <lan_addr: e.g. 192.168.1.1>
-			iptables -t nat -A NATMAP-POSTLOOPBACK -s $lan_subnet -d ${_server_ip}/32 -p $_proto -m $_proto --dport ${_server_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port} (reflection)" -j SNAT --to-source $lan_addr
-			#ref:    -t nat -A zone_lan_prerouting -s <lan_subnet: e.g. 192.168.1.0/24> -d <wan_addr: e.g. 100.64.0.1>/32 -p <protocol> -m <protocol> --dport <bind_port> [ -m comment --comment "comment..." ] -j DNAT --to-destination <intenal_server_ip>:<intenal_server_port>
-			iptables -t nat -A NATMAP-PRELOOPBACK -s $lan_subnet -d ${_bind_ip}/32 -p $_proto -m $_proto --dport ${_bind_port} -m comment --comment "NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port} (reflection)" -j DNAT --to-destination ${_server_ip}:${_server_port}
-			fi
-		else
-			return 1
-		fi
-	;;
-esac
-}
-
-# delet_fw_rule <family> <type> <id> <NAT loopback> <proto> <bind_ifname> <bind_port>
-delet_fw_rule() {
-	[ "$#" -ge 7 ] || return 1
-	local _family="$1" && shift
-	local _type="$1" && shift
-	local _id="$1" && shift
-	local _loopback="$1" && shift
-	local _proto="$1" && shift
-	local _bind_ifname="$1" && shift
-	local _bind_port="$1" && shift
-
-local order tab chain num
-
-case "$FW" in
-	fw4)
-		if   [ "$_type" == "input" ]; then
-			order="${order:+$order }'fw4:natmap_input'"
-		elif [ "$_type" == "dnat" -a "$_family" == "ipv4" ]; then
-			order="${order:+$order }'fw4:natmap_prerouting'"
-			#loopback
-			if [ "$_loopback" == "1" ]; then
-				order="${order:+$order }'fw4:natmap_postloopback' 'fw4:natmap_preloopback'"
-			fi
-		else
-			return 1
-		fi
-		for o in $order; do
-			tab="${o%%:*}"; tab="${tab#\'}"
-			chain="${o##*:}"; chain="${chain%\'}"
-			num="$(nft -nna list chain inet $tab $chain 2>/dev/null \
-			| sed -En "s|.+\s*comment\s*\"natmap_${_id}_${_proto}_${_bind_ifname}_${_bind_port}( \(reflection\))*\"\s*#\s*handle\s*(\d+).*|\2|p" | head -1)"
-			[ -n "$num" ] && {
-				nft -nna list chain inet $tab $chain | sed -n "/#\s*handle\s*${num}\s*$/p"
-				nft delete rule inet $tab $chain handle $num
-			}
-		done
-	;;
-	fw3)
-		case "$_family" in
-			ipv4)
-				if   [ "$_type" == "input" ]; then
-					order="${order:+$order }'filter:NATMAP'"
-				elif [ "$_type" == "dnat" ]; then
-					order="${order:+$order }'nat:NATMAP-PREROUTING'"
-					#loopback
-					if [ "$_loopback" == "1" ]; then
-						order="${order:+$order }'nat:NATMAP-POSTLOOPBACK' 'nat:NATMAP-PRELOOPBACK'"
-					fi
-				fi
-				for o in $order; do
-					tab="${o%%:*}"; tab="${tab#\'}"
-					chain="${o##*:}"; chain="${chain%\'}"
-					num="$(iptables -t $tab -vnL --line-number 2>/dev/null | sed -n "/^Chain $chain/,/^$/p" \
-					| sed -En "s|(\d+)\s*.+\/\* NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port}( \(reflection\))* \*\/.*|\1|p" | head -1)"
-					[ -n "$num" ] && {
-						iptables -t $tab -vnL $chain $num --line-number
-						iptables -t $tab -D $chain $num
-					}
-				done
-			;;
-			ipv6)
-				[ -x /usr/sbin/ip6tables ] && {
-					for o in "filter:NATMAP"; do
-						tab="${o%%:*}"; chain="${o##*:}"
-						num="$(ip6tables -t $tab -vnL --line-number 2>/dev/null | sed -n "/^Chain $chain/,/^$/p" \
-						| sed -En "s|(\d+)\s*.+\/\* NATMAP_${_id}_${_proto}_${_bind_ifname}_${_bind_port} \*\/.*|\1|p" | head -1)"
-						[ -n "$num" ] && {
-							ip6tables -t $tab -vnL $chain $num --line-number
-							ip6tables -t $tab -D $chain $num
-						}
-					done
-				} || return 1
-			;;
-		esac
-	;;
-esac
 }
 
 natmap_instance() {
@@ -396,6 +159,41 @@ natmap_instance() {
 	procd_set_param respawn
 	procd_set_param stdout 1
 	procd_set_param stderr 1
+
+	procd_open_data
+	# configure firewall
+	json_add_array firewall
+		if [ "$forward_mode" = 1 -a "$forward_method" = "dnat" ]; then
+			json_add_object ''
+			json_add_string type redirect
+			json_add_string target DNAT
+			json_add_string name "$1"
+			json_add_string family "$family"
+			json_add_string proto "$proto"
+			json_add_string src "$($FW -q device $bind_ifname)"
+			json_add_string src_dip "$bind_ip"
+			json_add_string src_dport "$port"
+			#json_add_string dest '' # zlan or zwan
+			json_add_string dest_ip "$forward_target"
+			json_add_string dest_port "$forward_port"
+			json_add_boolean reflection $natloopback
+			json_close_object
+		fi
+		if [ "$forward_mode" = 1 -a "$forward_method" = "via" -o "$forward_mode" = 	0 ]; then
+			json_add_object ''
+			json_add_string type rule
+			json_add_string target ACCEPT
+			json_add_string name "$1"
+			json_add_string family "$family"
+			json_add_string proto "$proto"
+			json_add_string src "$($FW -q device $bind_ifname)"
+			#json_add_string dest '' # '' = input
+			json_add_string dest_ip "$bind_ip"
+			json_add_string dest_port "$port"
+			json_close_object
+		fi
+	json_close_array
+	procd_close_data
 
 	procd_close_instance
 }
@@ -439,6 +237,7 @@ launcher() {
 			lan_addr="${NIC6_br_lan%/*}"
 		;;
 	esac
+	[ -z "$bind_ip" ] && >&2 echo "$(basename $0): section $1 bind_ip parsing failed, there may be no $family network connection" && let error++
 	[ -z "$port" ] && err_msg__empty $1 port && let error++
 	if   [ "$forward_mode" = 1 ]; then
 		[ "$forward_method" = "dnat" -a "$family" = "ipv6" ] && >&2 echo "$(basename $0): section $1 option forward_method 'dnat' not support under IPv6" && let error++
@@ -467,19 +266,11 @@ launcher() {
 	}
 	[ "$error" -gt 0 ] && return 1
 
-	# configure firewall
-	if [ "$forward_mode" = 1 -a "$forward_method" = "dnat" ]; then
-		write_fw_rule "$family" 'dnat' "$1" "$natloopback" "$proto" "$bind_ifname" "$bind_ip" "$port" "$forward_target" "$forward_port" || return 1
-	fi
-	if [ "$forward_mode" = 1 -a "$forward_method" = "via" -o "$forward_mode" = 0 ]; then
-		write_fw_rule "$family" 'input' "$1" "0" "$proto" "$bind_ifname" "$bind_ip" "$port" || return 1
-	fi
-
 	natmap_instance "$1"
 }
 
 service_triggers() {
-	procd_add_reload_trigger "$NAME" 'network' 'firewall'
+	procd_add_reload_trigger "$NAME" 'network'
 
 	local interfaces
 
@@ -506,7 +297,7 @@ service_triggers() {
 
 start_service() {
 
-	service_stopped
+	clear_status_files
 
 	config_foreach validate_section_global "$GLOBALSECTION" define_global || return $?
 	[ "${GLOBAL_enable:=0}" == "0" ] && return 1
@@ -519,8 +310,9 @@ reload_service() {
 	start
 }
 
+service_started() { procd_set_config_changed firewall; }
+
 service_stopped() {
 	clear_status_files
-	clean_fw_rules
-	return 0
+	procd_set_config_changed firewall
 }
