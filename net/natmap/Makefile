@@ -36,7 +36,7 @@ endef
 
 define Package/natmap/prerm
 #!/bin/sh
-uci delete firewall.$(PKG_NAME)
+uci -q delete firewall.$(PKG_NAME)
 uci commit firewall
 endef
 

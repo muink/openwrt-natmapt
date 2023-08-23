@@ -179,7 +179,7 @@ natmap_instance() {
 			json_add_boolean reflection $natloopback
 			json_close_object
 		fi
-		if [ "$forward_mode" = 1 -a "$forward_method" = "via" -o "$forward_mode" = 	0 ]; then
+		if [ "$forward_mode" = 1 -a "$forward_method" = "via" -o "$forward_mode" = 0 ]; then
 			json_add_object ''
 			json_add_string type rule
 			json_add_string target ACCEPT
