@@ -153,7 +153,9 @@ natmap_instance() {
 	[ "$forward" = 1 -a "$forward_mode" = "via" -a -n "${forward_target}" ] && procd_append_param command -t "$forward_target" -p "$forward_port"
 
 	procd_set_param env "SECTIONID=$1"
-	[ "$forward" = 1 -a "$forward_mode" = "dnat" -a "$forward_port" = 0 ] && procd_append_param env "REFRESH=1"
+	if [ "$forward" = 1 -a "$forward_port" = 0 ]; then
+		[ "$forward_mode" = "dnat" ] && procd_append_param env "RWFW=1"
+	fi
 
 	[ -n "${notify_script}" ] && procd_append_param env "NOTIFY_SCRIPT=${notify_script}"
 	procd_append_param command -e /usr/lib/natmap/update.sh
