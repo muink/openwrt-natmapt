@@ -27,7 +27,7 @@ fi
 	json_dump > /var/run/natmap/$PPID.json
 )
 
-[ -n "${NOTIFY_SCRIPT}" ] && {
-	export -n NOTIFY_SCRIPT
-	exec "${NOTIFY_SCRIPT}" "$ip" "$port" "$ip4p" "$inner_port" "$protocol" "$inner_ip" "$SECTIONID" "$@"
+[ -n "${CUSTOM_SCRIPT}" ] && {
+	export -n CUSTOM_SCRIPT
+	exec "${CUSTOM_SCRIPT}" "$ip" "$port" "$ip4p" "$inner_port" "$protocol" "$inner_ip" "$SECTIONID" "$@"
 }

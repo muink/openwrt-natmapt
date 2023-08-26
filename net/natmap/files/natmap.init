@@ -107,7 +107,7 @@ validate_section_natmap() {
 		'natloopback:bool:1' \
 		'forward_target:ipaddr(1)' \
 		'forward_port:port' \
-		'notify_script:file'
+		'custom_script:file'
 }
 
 # ip_match <family> <ipaddr>
@@ -157,7 +157,7 @@ natmap_instance() {
 		[ "$forward_mode" = "dnat" ] && procd_append_param env "RWFW=1"
 	fi
 
-	[ -n "${notify_script}" ] && procd_append_param env "NOTIFY_SCRIPT=${notify_script}"
+	[ -n "${custom_script}" ] && procd_append_param env "CUSTOM_SCRIPT=${custom_script}"
 	procd_append_param command -e /usr/lib/natmap/update.sh
 
 	procd_set_param respawn
@@ -266,7 +266,7 @@ launcher() {
 	fi
 	# review
 	[ -n "$NATMAP_DEBUG" ] && {
-		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_target forward_port"
+		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_target forward_port custom_script"
 		for v in $ucivv; do eval "echo $1 $v=\'\$$v\'"; done # ash not support ${!v}
 	}
 	[ "$error" -gt 0 ] && return 1
