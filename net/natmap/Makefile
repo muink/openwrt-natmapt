@@ -22,7 +22,7 @@ define Package/natmap
   CATEGORY:=Network
   TITLE:=TCP/UDP port mapping tool for full cone NAT
   URL:=https://github.com/heiher/natmap
-  DEPENDS:= +jsonfilter
+  DEPENDS:=+curl +jsonfilter
 endef
 
 MAKE_FLAGS += REV_ID="$(PKG_VERSION)"
@@ -40,6 +40,8 @@ define Package/natmap/install
 	$(INSTALL_CONF) ./files/natmap.config $(1)/etc/config/natmap
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/natmap.init $(1)/etc/init.d/natmap
+	$(INSTALL_DIR) $(1)/etc/natmap/client
+	$(INSTALL_BIN) ./files/client/* $(1)/etc/natmap/client/
 endef
 
 $(eval $(call BuildPackage,natmap))

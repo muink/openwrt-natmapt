@@ -1,0 +1,31 @@
+#!/bin/sh
+# Copyright (C) 2023 muink https://github.com/muink
+#
+# Client listen port refresh script
+#
+# depends curl jsonfilter
+
+# All external parameters required
+ALL_PARAMS="ip port scheme web_port username password"
+
+JSON_PARSE() {
+	for k in $ALL_PARAMS; do
+		jsonfilter -qs "$1" -e "$k=@['$k']"
+	done
+}
+
+start() {
+	local retry='--connect-timeout 1 --retry 0'
+	scheme='http' # only supports http
+	local sid="$(curl $retry -L \
+		-u ${username}:${password} \
+		--url ${scheme}://${ip}:${web_port}/transmission/rpc \
+		| sed 's|.*<code>||g;s|</code>.*||g')"
+	curl $retry -L -X POST \
+		-H "$sid" -u ${username}:${password} \
+		-d '{"method":"session-set","arguments":{"peer-port":"'"${port}"'"}}' \
+		--url ${scheme}://${ip}:${web_port}/transmission/rpc
+}
+
+eval "$(JSON_PARSE "$1")"; shift
+start "$@"

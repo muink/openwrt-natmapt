@@ -14,6 +14,12 @@ if [ -n "$RWFW" -a "$($INITD info|jsonfilter -qe "@['$(basename $INITD)'].instan
 	export PUBPORT="$port" #PROCD_DEBUG=1
 	$INITD start "$SECTIONID"
 fi
+if [ -n "$REFRESH" ]; then
+	json_cleanup
+	json_load "$REFRESH_PARAM"
+	json_add_int port "$port"
+	$REFRESH "$(json_dump)"
+fi
 
 (
 	json_init
