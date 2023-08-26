@@ -40,6 +40,8 @@ define Package/natmap/install
 	$(INSTALL_CONF) ./files/natmap.config $(1)/etc/config/natmap
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/natmap.init $(1)/etc/init.d/natmap
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/natmap.defaults $(1)/etc/uci-defaults/97_natmap
 	$(INSTALL_DIR) $(1)/etc/natmap/client
 	$(INSTALL_BIN) ./files/client/* $(1)/etc/natmap/client/
 endef
