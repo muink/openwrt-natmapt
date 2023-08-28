@@ -3,16 +3,9 @@
 #
 # Client listen port refresh script
 #
-# depends curl jsonfilter
+# depends curl
 
-# All external parameters required
-ALL_PARAMS="ip port scheme web_port username password"
-
-JSON_PARSE() {
-	for k in $ALL_PARAMS; do
-		jsonfilter -qs "$1" -e "$k=@['$k']"
-	done
-}
+. /usr/lib/natmap/common.sh
 
 start() {
 	local retry='--connect-timeout 1 --retry 0'
@@ -27,5 +20,8 @@ start() {
 		--url ${scheme}://${ip}:${web_port}/transmission/rpc
 }
 
-eval "$(JSON_PARSE "$1")"; shift
+
+# All external parameters required
+ALL_PARAMS="ip port scheme web_port username password"
+eval "$(JSON_EXPORT "$1")"; shift
 start "$@"

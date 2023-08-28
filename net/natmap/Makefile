@@ -39,6 +39,7 @@ define Package/natmapt/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/natmap $(1)/usr/bin/
 	$(INSTALL_DIR) $(1)/usr/lib/natmap/
 	$(INSTALL_BIN) ./files/natmap-update.sh $(1)/usr/lib/natmap/update.sh
+	$(INSTALL_BIN) ./files/common.sh $(1)/usr/lib/natmap/common.sh
 	$(INSTALL_DIR) $(1)/etc/config/
 	$(INSTALL_CONF) ./files/natmap.config $(1)/etc/config/natmap
 	$(INSTALL_DIR) $(1)/etc/init.d/
