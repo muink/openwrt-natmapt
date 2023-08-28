@@ -1,23 +1,26 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=natmap
+PKG_NAME:=natmapt
 PKG_VERSION:=20230820
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/heiher/natmap/releases/download/$(PKG_VERSION)
-PKG_HASH:=bf8aed93818846c54c472f5cc047c88c4ca8518bee16cace2aeabafb82ff3a21
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/heiher/natmap.git
+PKG_SOURCE_VERSION:=931f7b0d223e64becb4478845940e9a331201c6c
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
-PKG_MAINTAINER:=Richard Yu <yurichard3839@gmail.com>, Ray Wang <r@hev.cc>
+PKG_MAINTAINER:=Anya Lin <hukk1996@gmail.com>, Richard Yu <yurichard3839@gmail.com>, Ray Wang <r@hev.cc>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=License
 
+PKG_USE_MIPS16:=0
 PKG_BUILD_FLAGS:=no-mips16
 PKG_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/natmap
+define Package/natmapt
   SECTION:=net
   CATEGORY:=Network
   TITLE:=TCP/UDP port mapping tool for full cone NAT
@@ -27,11 +30,11 @@ endef
 
 MAKE_FLAGS += REV_ID="$(PKG_VERSION)"
 
-define Package/natmap/conffiles
+define Package/natmapt/conffiles
 /etc/config/natmap
 endef
 
-define Package/natmap/install
+define Package/natmapt/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/natmap $(1)/usr/bin/
 	$(INSTALL_DIR) $(1)/usr/lib/natmap/
@@ -43,7 +46,30 @@ define Package/natmap/install
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_BIN) ./files/natmap.defaults $(1)/etc/uci-defaults/97_natmap
 	$(INSTALL_DIR) $(1)/etc/natmap/client
-	$(INSTALL_BIN) ./files/client/* $(1)/etc/natmap/client/
+	$(INSTALL_BIN) ./files/client/qBittorrent $(1)/etc/natmap/client/
 endef
 
-$(eval $(call BuildPackage,natmap))
+define Package/natmapt-scripts/Default
+	SECTION:=net
+	CATEGORY:=Network
+	TITLE:=NATMap $(1) scripts ($(2))
+	DEPENDS:=+natmapt
+	PROVIDES:=natmapt-$(1)-scripts
+	PKGARCH:=all
+endef
+
+define Package/natmapt-scripts/install/Default
+	$(INSTALL_DIR) $(1)/etc/natmap/$(2)
+	$(INSTALL_BIN) ./files/$(2)/$(3) $(1)/etc/natmap/$(2)/
+endef
+
+define Package/natmapt-client-script-transmission
+	$(call Package/natmapt-scripts/Default,client,Transmission)
+	DEPENDS+:=
+endef
+define Package/natmapt-client-script-transmission/install
+	$(call Package/natmapt-scripts/install/Default,$(1),client,Transmission)
+endef
+
+$(eval $(call BuildPackage,natmapt))
+$(eval $(call BuildPackage,natmapt-client-script-transmission))
