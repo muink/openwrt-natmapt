@@ -37,7 +37,7 @@ popd
 # Select the package Network -> natmapt
 make menuconfig
 # Start compiling
-make package/natmapt/nat/natmap/compile V=99
+make package/natmapt/compile V=99
 ```
 
 [NATMap]: https://github.com/heiher/natmap
