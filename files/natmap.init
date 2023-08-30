@@ -322,14 +322,13 @@ service_triggers() {
 start_service() {
 	local sid="$1"
 
-	clear_status_files
-
 	config_foreach validate_section_global "$GLOBALSECTION" define_global || return $?
 	[ "${GLOBAL_enable:=0}" == "0" ] && return 1
 
 	if [ -n "$sid" ]; then
 		validate_section_natmap "$sid" launcher
 	else
+		clear_status_files
 		config_foreach validate_section_natmap "$NATMAPSECTION" launcher
 	fi
 }
