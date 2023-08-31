@@ -73,5 +73,14 @@ define Package/natmapt-client-script-transmission/install
 	$(call Package/natmapt-scripts/install/Default,$(1),client,Transmission)
 endef
 
+define Package/natmapt-client-script-deluge
+	$(call Package/natmapt-scripts/Default,client,Deluge)
+	DEPENDS+:=
+endef
+define Package/natmapt-client-script-deluge/install
+	$(call Package/natmapt-scripts/install/Default,$(1),client,Deluge)
+endef
+
 $(eval $(call BuildPackage,natmapt))
 $(eval $(call BuildPackage,natmapt-client-script-transmission))
+$(eval $(call BuildPackage,natmapt-client-script-deluge))
