@@ -40,6 +40,12 @@ make menuconfig
 make package/natmapt/compile V=99
 ```
 
+## Collaborators
+
+[Ray Wang](https://github.com/heiher)  
+[Richard Yu](https://github.com/ysc3839)  
+[Anya Lin](https://github.com/muink)  
+
 [NATMap]: https://github.com/heiher/natmap
 [luci-app-natmapt]: https://github.com/muink/luci-app-natmapt
 
