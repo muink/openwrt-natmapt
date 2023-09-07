@@ -163,7 +163,13 @@ natmap_instance() {
 		[ "$forward_mode" = "dnat" ] && procd_append_param env "RWFW=1"
 		if [ "$refresh" = 1 ]; then
 			procd_append_param env "REFRESH=$clt_script"
-			procd_append_param env "REFRESH_PARAM={\"scheme\":\"$clt_scheme\",\"web_port\":$clt_web_port,\"username\":\"$clt_username\",\"password\":\"$clt_password\",\"ip\":\"$forward_target\"}"
+			json_init
+			json_add_string scheme "$clt_scheme"
+			json_add_int web_port "$clt_web_port"
+			json_add_string username "$clt_username"
+			json_add_string password "$clt_password"
+			json_add_string ip "$forward_target"
+			procd_append_param env "REFRESH_PARAM=$(json_dump)"
 		fi
 	fi
 
