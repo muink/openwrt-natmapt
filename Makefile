@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=natmapt
 PKG_VERSION:=20230820
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/heiher/natmap.git
@@ -26,7 +26,7 @@ define Package/natmapt
   CATEGORY:=Network
   TITLE:=TCP/UDP port mapping tool for full cone NAT
   URL:=https://github.com/heiher/natmap
-  DEPENDS:=+curl +jsonfilter
+  DEPENDS:=+curl +jsonfilter +bash
 endef
 
 MAKE_FLAGS += REV_ID="$(PKG_VERSION)"
@@ -49,6 +49,8 @@ define Package/natmapt/install
 	$(INSTALL_BIN) ./files/natmap.defaults $(1)/etc/uci-defaults/97_natmap
 	$(INSTALL_DIR) $(1)/etc/natmap/client
 	$(INSTALL_BIN) ./files/client/qBittorrent $(1)/etc/natmap/client/
+	$(INSTALL_DIR) $(1)/etc/natmap/notify
+	$(INSTALL_BIN) ./files/notify/Telegram $(1)/etc/natmap/notify/
 endef
 
 define Package/natmapt-scripts/Default
@@ -81,6 +83,15 @@ define Package/natmapt-client-script-deluge/install
 	$(call Package/natmapt-scripts/install/Default,$(1),client,Deluge)
 endef
 
+define Package/natmapt-notify-script-pushbullet
+	$(call Package/natmapt-scripts/Default,notify,Pushbullet)
+	DEPENDS+:=
+endef
+define Package/natmapt-notify-script-pushbullet/install
+	$(call Package/natmapt-scripts/install/Default,$(1),notify,Pushbullet)
+endef
+
 $(eval $(call BuildPackage,natmapt))
 $(eval $(call BuildPackage,natmapt-client-script-transmission))
 $(eval $(call BuildPackage,natmapt-client-script-deluge))
+$(eval $(call BuildPackage,natmapt-notify-script-pushbullet))

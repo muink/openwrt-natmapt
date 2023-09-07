@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ip="$1"
 port="$2"
 ip4p="$3"
@@ -19,6 +19,14 @@ if [ -n "$REFRESH" ]; then
 	json_load "$REFRESH_PARAM"
 	json_add_int port "$port"
 	$REFRESH "$(json_dump)"
+fi
+if [ -n "$NOTIFY" ]; then
+	_text="$(jsonfilter -qs "$NOTIFY_PARAM" -e '@["text"]')"
+	[ -n "$_text" ] && eval "_text=\"$_text\"" || _text="NATMap: [${protocol^^}] $inner_ip:$inner_port -> $ip:$port"
+	json_cleanup
+	json_load "$NOTIFY_PARAM"
+	json_add_string text "$_text"
+	$NOTIFY "$(json_dump)"
 fi
 
 (
