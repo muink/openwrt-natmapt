@@ -121,6 +121,8 @@ validate_section_natmap() {
 		'ddns_enable:bool:0' \
 		'ddns_script:file' \
 		'ddns_tokens:list(string)' \
+		'ddns_a:hostname' \
+		'ddns_aaaa:hostname' \
 		'custom_script:file'
 }
 
@@ -195,6 +197,8 @@ natmap_instance() {
 		procd_append_param env "DDNS=$ddns_script"
 		json_init
 		json_add_string tokens "$ddns_tokens"
+		[ "$family" = ipv4 ] && json_add_string hostype "A" && json_add_string host "$ddns_a"
+		[ "$family" = ipv6 ] && json_add_string hostype "AAAA" && json_add_string host "$ddns_aaaa"
 		procd_append_param env "DDNS_PARAM=$(json_dump)"
 	fi
 
@@ -328,7 +332,7 @@ launcher() {
 
 	# review
 	[ -n "$NATMAP_DEBUG" ] && {
-		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_target forward_port refresh clt_script clt_scheme clt_web_port clt_username clt_password notify_enable notify_script notify_tokens notify_custom_domain notify_text ddns_enable ddns_script ddns_tokens custom_script"
+		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_target forward_port refresh clt_script clt_scheme clt_web_port clt_username clt_password notify_enable notify_script notify_tokens notify_custom_domain notify_text ddns_enable ddns_script ddns_tokens ddns_a ddns_aaaa custom_script"
 		for v in $ucivv; do eval "echo $1 $v=\'\$$v\'"; done # ash not support ${!v}
 	}
 	[ "$error" -gt 0 ] && return 1
