@@ -125,7 +125,7 @@ validate_section_natmap() {
 		'ddns_aaaa:hostname' \
 		'ddns_srv:hostname' \
 		'ddns_srv_serv:string' \
-		'ddns_srv_proto:or("tcp", "udp", "tls"):tcp' \
+		'ddns_srv_proto:string:tcp' \
 		'ddns_srv_target:hostname' \
 		'ddns_srv_priority:range(0, 65535):0' \
 		'ddns_srv_weight:range(0, 65535):65535' \
@@ -335,27 +335,21 @@ launcher() {
 		unset forward_target forward_port
 	fi
 	## refresh
-	if   [ "$refresh" = 1 ]; then
+	if [ "$refresh" = 1 ]; then
 		[ -x "$clt_script" ] || { >&2 echo "$(basename $0): section $1 option clt_script '$clt_script' is empty or non-executable"; let error++; }
 		[ -z "$clt_web_port" ] && err_msg__empty $1 clt_web_port && let error++
-	elif [ "$refresh" = 0 ]; then
-		unset clt_script
 	fi
 	## notify
-	if   [ "$notify_enable" = 1 ]; then
+	if [ "$notify_enable" = 1 ]; then
 		[ -x "$notify_script" ] || { >&2 echo "$(basename $0): section $1 option notify_script '$notify_script' is empty or non-executable"; let error++; }
-	elif [ "$notify_enable" = 0 ]; then
-		unset notify_script
 	fi
 	## ddns
-	if   [ "$ddns_enable" = 1 ]; then
+	if [ "$ddns_enable" = 1 ]; then
 		[ -x "$ddns_script" ] || { >&2 echo "$(basename $0): section $1 option ddns_script '$ddns_script' is empty or non-executable"; let error++; }
 		if [ -n "$ddns_srv" ]; then
 			[ -z "$ddns_srv_serv" ] && err_msg__empty $1 ddns_srv_serv && let error++
 			echo ${ddns_srv_target:=$ddns_srv} >/dev/null
 		fi
-	elif [ "$ddns_enable" = 0 ]; then
-		unset ddns_script
 	fi
 
 	# review
