@@ -51,6 +51,8 @@ define Package/natmapt/install
 	$(INSTALL_BIN) ./files/client/qBittorrent $(1)/etc/natmap/client/
 	$(INSTALL_DIR) $(1)/etc/natmap/notify
 	$(INSTALL_BIN) ./files/notify/Telegram $(1)/etc/natmap/notify/
+	$(INSTALL_DIR) $(1)/etc/natmap/ddns
+	$(INSTALL_BIN) ./files/ddns/Cloudflare $(1)/etc/natmap/ddns/
 endef
 
 define Package/natmapt-scripts/Default
