@@ -36,6 +36,13 @@ if [ -n "$NOTIFY" ]; then
 	json_add_string text "$_text"
 	$NOTIFY "$(json_dump)"
 fi
+if [ -n "$DDNS" ]; then
+	json_cleanup
+	json_load "$DDNS_PARAM"
+	json_add_string ip "$ip"
+	json_add_int port "$port"
+	$DDNS "$(json_dump)"
+fi
 
 (
 	json_init

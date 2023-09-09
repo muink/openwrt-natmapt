@@ -118,6 +118,9 @@ validate_section_natmap() {
 		'notify_tokens:list(string)' \
 		'notify_custom_domain:hostname' \
 		'notify_text:string' \
+		'ddns_enable:bool:0' \
+		'ddns_script:file' \
+		'ddns_tokens:list(string)' \
 		'custom_script:file'
 }
 
@@ -186,6 +189,13 @@ natmap_instance() {
 		json_add_string text "$notify_text"
 		json_add_string tokens "$notify_tokens"
 		procd_append_param env "NOTIFY_PARAM=$(json_dump)"
+	fi
+
+	if [ "$ddns_enable" = 1 ]; then
+		procd_append_param env "DDNS=$ddns_script"
+		json_init
+		json_add_string tokens "$ddns_tokens"
+		procd_append_param env "DDNS_PARAM=$(json_dump)"
 	fi
 
 	[ -n "${custom_script}" ] && procd_append_param env "CUSTOM_SCRIPT=${custom_script}"
@@ -309,10 +319,16 @@ launcher() {
 	elif [ "$notify_enable" = 0 ]; then
 		unset notify_script
 	fi
+	## ddns
+	if   [ "$ddns_enable" = 1 ]; then
+		[ -x "$ddns_script" ] || { >&2 echo "$(basename $0): section $1 option ddns_script '$ddns_script' is empty or non-executable"; let error++; }
+	elif [ "$ddns_enable" = 0 ]; then
+		unset ddns_script
+	fi
 
 	# review
 	[ -n "$NATMAP_DEBUG" ] && {
-		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_target forward_port refresh clt_script clt_scheme clt_web_port clt_username clt_password notify_enable notify_script notify_tokens notify_custom_domain notify_text custom_script"
+		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_target forward_port refresh clt_script clt_scheme clt_web_port clt_username clt_password notify_enable notify_script notify_tokens notify_custom_domain notify_text ddns_enable ddns_script ddns_tokens custom_script"
 		for v in $ucivv; do eval "echo $1 $v=\'\$$v\'"; done # ash not support ${!v}
 	}
 	[ "$error" -gt 0 ] && return 1
