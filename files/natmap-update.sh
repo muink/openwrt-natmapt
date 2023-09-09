@@ -23,7 +23,14 @@ fi
 if [ -n "$NOTIFY" ]; then
 	comment="$(jsonfilter -qs "$NOTIFY_PARAM" -e '@["comment"]')"
 	_text="$(jsonfilter -qs "$NOTIFY_PARAM" -e '@["text"]')"
-	[ -n "$_text" ] && eval "_text=\"$_text\"" || _text="NATMap: ${comment:+$comment: }[${protocol^^}] $inner_ip:$inner_port -> $ip:$port"
+	[ -z "$_text" ] && _text="NATMap: ${comment:+$comment: }[${protocol^^}] $inner_ip:$inner_port -> $ip:$port" \
+	|| _text="$(echo "$_text" | sed " \
+		s|<comment>|$comment|g; \
+		s|<protocol>|$protocol|g; \
+		s|<inner_ip>|$inner_ip|g; \
+		s|<inner_port>|$inner_port|g; \
+		s|<ip>|$ip|g; \
+		s|<port>|$port|g")"
 	json_cleanup
 	json_load "$NOTIFY_PARAM"
 	json_add_string text "$_text"
