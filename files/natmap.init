@@ -182,6 +182,7 @@ natmap_instance() {
 		procd_append_param env "NOTIFY=$notify_script"
 		json_init
 		json_add_string custom_domain "$notify_custom_domain"
+		json_add_string comment "$comment"
 		json_add_string text "$notify_text"
 		json_add_string tokens "$notify_tokens"
 		procd_append_param env "NOTIFY_PARAM=$(json_dump)"
