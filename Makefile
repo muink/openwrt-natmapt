@@ -50,7 +50,7 @@ define Package/natmapt/install
 	$(INSTALL_DIR) $(1)/etc/natmap/client
 	$(INSTALL_BIN) ./files/client/qBittorrent $(1)/etc/natmap/client/
 	$(INSTALL_DIR) $(1)/etc/natmap/notify
-	$(INSTALL_BIN) ./files/notify/Telegram $(1)/etc/natmap/notify/
+	$(INSTALL_BIN) ./files/notify/ntfy $(1)/etc/natmap/notify/
 	$(INSTALL_DIR) $(1)/etc/natmap/ddns
 	$(INSTALL_BIN) ./files/ddns/Cloudflare $(1)/etc/natmap/ddns/
 endef
@@ -101,8 +101,17 @@ define Package/natmapt-notify-script-pushover/install
 	$(call Package/natmapt-scripts/install/Default,$(1),notify,Pushover)
 endef
 
+define Package/natmapt-notify-script-telegram
+	$(call Package/natmapt-scripts/Default,notify,Telegram)
+	DEPENDS+:=
+endef
+define Package/natmapt-notify-script-telegram/install
+	$(call Package/natmapt-scripts/install/Default,$(1),notify,Telegram)
+endef
+
 $(eval $(call BuildPackage,natmapt))
 $(eval $(call BuildPackage,natmapt-client-script-transmission))
 $(eval $(call BuildPackage,natmapt-client-script-deluge))
 $(eval $(call BuildPackage,natmapt-notify-script-pushbullet))
 $(eval $(call BuildPackage,natmapt-notify-script-pushover))
+$(eval $(call BuildPackage,natmapt-notify-script-telegram))

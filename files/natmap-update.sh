@@ -1,10 +1,10 @@
 #!/bin/bash
-ip="$1"
-port="$2"
-ip4p="$3"
-inner_port="$4"
-protocol="$5"
-inner_ip="$6"
+export ip="$1"
+export port="$2"
+export ip4p="$3"
+export inner_port="$4"
+export protocol="$5"
+export inner_ip="$6"
 shift 6
 
 . /usr/share/libubox/jshn.sh
