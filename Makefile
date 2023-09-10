@@ -93,7 +93,16 @@ define Package/natmapt-notify-script-pushbullet/install
 	$(call Package/natmapt-scripts/install/Default,$(1),notify,Pushbullet)
 endef
 
+define Package/natmapt-notify-script-pushover
+	$(call Package/natmapt-scripts/Default,notify,Pushover)
+	DEPENDS+:=
+endef
+define Package/natmapt-notify-script-pushover/install
+	$(call Package/natmapt-scripts/install/Default,$(1),notify,Pushover)
+endef
+
 $(eval $(call BuildPackage,natmapt))
 $(eval $(call BuildPackage,natmapt-client-script-transmission))
 $(eval $(call BuildPackage,natmapt-client-script-deluge))
 $(eval $(call BuildPackage,natmapt-notify-script-pushbullet))
+$(eval $(call BuildPackage,natmapt-notify-script-pushover))
