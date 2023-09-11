@@ -21,11 +21,10 @@ if [ -n "$REFRESH" ]; then
 	$REFRESH "$(json_dump)"
 fi
 if [ -n "$NOTIFY" ]; then
-	comment="$(jsonfilter -qs "$NOTIFY_PARAM" -e '@["comment"]')"
 	_text="$(jsonfilter -qs "$NOTIFY_PARAM" -e '@["text"]')"
-	[ -z "$_text" ] && _text="NATMap: ${comment:+$comment: }[${protocol^^}] $inner_ip:$inner_port -> $ip:$port" \
+	[ -z "$_text" ] && _text="NATMap: ${COMMENT:+$COMMENT: }[${protocol^^}] $inner_ip:$inner_port -> $ip:$port" \
 	|| _text="$(echo "$_text" | sed " \
-		s|<comment>|$comment|g; \
+		s|<comment>|$COMMENT|g; \
 		s|<protocol>|$protocol|g; \
 		s|<inner_ip>|$inner_ip|g; \
 		s|<inner_port>|$inner_port|g; \
@@ -33,6 +32,7 @@ if [ -n "$NOTIFY" ]; then
 		s|<port>|$port|g")"
 	json_cleanup
 	json_load "$NOTIFY_PARAM"
+	json_add_string comment "$COMMENT"
 	json_add_string text "$_text"
 	$NOTIFY "$(json_dump)"
 fi
@@ -53,6 +53,7 @@ fi
 (
 	json_init
 	json_add_string sid "$SECTIONID"
+	json_add_string comment "$COMMENT"
 	json_add_string ip "$ip"
 	json_add_int port "$port"
 	json_add_string ip4p "$ip4p"
@@ -64,5 +65,5 @@ fi
 
 [ -n "${CUSTOM_SCRIPT}" ] && {
 	export -n CUSTOM_SCRIPT
-	exec "${CUSTOM_SCRIPT}" "$ip" "$port" "$ip4p" "$inner_port" "$protocol" "$inner_ip" "$SECTIONID" "$@"
+	exec "${CUSTOM_SCRIPT}" "$ip" "$port" "$ip4p" "$inner_port" "$protocol" "$inner_ip" "$SECTIONID" "$COMMENT" "$@"
 }
