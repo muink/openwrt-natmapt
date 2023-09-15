@@ -72,7 +72,7 @@ define_global() {
 	[ "$2" == "0" ] || { >&2 echo "$(basename $0): section $1 validation failed"; return 1; }
 
 	local error=0
-	local v ucivv="enable def_tcp_stun def_udp_stun def_http_server def_interval"
+	local v ucivv="enable def_tcp_stun def_udp_stun def_http_server def_tcp_interval def_udp_interval"
 	for v in $ucivv; do
 		[ -z "$(config_get $1 $v)" ] && err_msg__empty $1 $v && let error++
 		config_get GLOBAL_$v $1 $v
@@ -87,7 +87,8 @@ validate_section_global() {
 		'def_tcp_stun:hostname' \
 		'def_udp_stun:hostname' \
 		'def_http_server:hostname' \
-		'def_interval:and(uinteger, min(1)):10' \
+		'def_tcp_interval:and(uinteger, min(1)):30' \
+		'def_udp_interval:and(uinteger, min(1)):15' \
 		'test_port:and(port, min(1))'
 }
 
@@ -289,10 +290,9 @@ launcher() {
 
 	# global options
 	[ "$udp_mode" = 1 ] \
-		&& echo ${stun_server:=$GLOBAL_def_udp_stun} >/dev/null \
-		|| echo ${stun_server:=$GLOBAL_def_tcp_stun} >/dev/null
-	echo ${http_server:=$GLOBAL_def_http_server} \
-	${interval:=$GLOBAL_def_interval} >/dev/null
+		&& echo ${stun_server:=$GLOBAL_def_udp_stun} ${interval:=$GLOBAL_def_udp_interval} >/dev/null \
+		|| echo ${stun_server:=$GLOBAL_def_tcp_stun} ${interval:=$GLOBAL_def_tcp_interval} >/dev/null
+	echo ${http_server:=$GLOBAL_def_http_server} >/dev/null
 	# natmap options
 	local error=0
 	local proto ifname bind_ip lan_addr

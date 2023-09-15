@@ -23,4 +23,7 @@ for k in $(uci -q show $NAME|sed -En "s|^$NAME\.@$NATMAPSECTION\[(\d+)\]\.interf
 	uci delete $NAME.@$NATMAPSECTION[$i].interface
 	uci commit $NAME
 done
+else
+## def_interval --> def_tcp_interval/def_udp_interval
+sed -Ei 's|def_interval (.*)|def_tcp_interval \1\n\toption def_udp_interval \1|' "$CONF"
 fi
