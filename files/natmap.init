@@ -22,10 +22,11 @@ config_load "$NAME"
 define_nic() {
 	local dev sub addr
 	# get all active NICs
-	for dev in $(ip -o link|sed -En "s|^\d:\s*([^:]+):.*|\1|gp"); do
+	for dev in $(ip -o link|sed -En "s|^\d+:\s*([^:]+):.*|\1|gp"); do
+		dev="${dev%@*}"
 		#ipv4
 		sub=$(ip -o -4 addr|sed -En "s|.*${dev}\s+inet\s+([0-9\./]+).*|\1|gp")
-		eval "NIC_${dev//-/_}=\"\$sub\""
+		eval "NIC_${dev//[[:punct:]]/_}=\"\$sub\""
 		#ipv6
 		sub=$(ip -o -6 addr|sed -En "s|.*${dev}\s+inet6\s+([A-Za-z0-9\./:]+).*|\1|gp")
 		# ref: https://github.com/openwrt/openwrt/blob/main/package/base-files/files/lib/functions/network.sh#L53 #network_get_subnet6()
@@ -48,7 +49,7 @@ define_nic() {
 				sub=$addr; break
 			done
 		done
-		eval "NIC6_${dev//-/_}=\"\$sub\""
+		eval "NIC6_${dev//[[:punct:]]/_}=\"\$sub\""
 	done
 	# get default gateway 0.0.0.0/::
 	network_find_wan DEF_WAN true
@@ -304,11 +305,11 @@ launcher() {
 	[ -z "${bind_ifname:=$ifname}" ] && >&2 echo "$(basename $0): section $1 option bind_ifname parsing failed, there may be no $family network connection" && let error++
 	case "$family" in
 		ipv4)
-			eval "bind_ip=\"\${NIC_${bind_ifname//-/_}%/*}\""
+			eval "bind_ip=\"\${NIC_${bind_ifname//[[:punct:]]/_}%/*}\""
 			lan_addr="${NIC_br_lan%/*}"
 		;;
 		ipv6)
-			eval "bind_ip=\"\${NIC6_${bind_ifname//-/_}%/*}\""
+			eval "bind_ip=\"\${NIC6_${bind_ifname//[[:punct:]]/_}%/*}\""
 			lan_addr="${NIC6_br_lan%/*}"
 		;;
 	esac
