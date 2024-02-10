@@ -22,8 +22,7 @@ config_load "$NAME"
 define_nic() {
 	local dev sub addr
 	# get all active NICs
-	for dev in $(ip -o link|sed -En "s|^\d+:\s*([^:]+):.*|\1|gp"); do
-		dev="${dev%@*}"
+	for dev in $(ls /sys/class/net/); do
 		#ipv4
 		sub=$(ip -o -4 addr|sed -En "s|.*${dev}\s+inet\s+([0-9\./]+).*|\1|gp")
 		eval "NIC_${dev//[[:punct:]]/_}=\"\$sub\""
