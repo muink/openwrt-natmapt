@@ -84,9 +84,9 @@ define_global() {
 validate_section_global() {
 	uci_load_validate "$NAME" "$GLOBALSECTION" "$1" "$2" \
 		'enable:bool:0' \
-		'def_tcp_stun:hostname' \
-		'def_udp_stun:hostname' \
-		'def_http_server:hostname' \
+		'def_tcp_stun:or(hostname, hostport)' \
+		'def_udp_stun:or(hostname, hostport)' \
+		'def_http_server:or(hostname, hostport)' \
 		'def_tcp_interval:and(uinteger, min(1)):30' \
 		'def_udp_interval:and(uinteger, min(1)):15' \
 		'test_port:and(port, min(1))'
@@ -96,8 +96,8 @@ validate_section_natmap() {
 	uci_load_validate "$NAME" "$NATMAPSECTION" "$1" "$2" \
 		'enable:bool:0' \
 		'interval:and(uinteger, min(1))' \
-		'stun_server:hostname' \
-		'http_server:hostname' \
+		'stun_server:or(hostname, hostport)' \
+		'http_server:or(hostname, hostport)' \
 		'comment:string' \
 		'udp_mode:bool:0' \
 		'family:or("ipv4", "ipv6"):ipv4' \
