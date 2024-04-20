@@ -134,7 +134,9 @@ validate_section_natmap() {
 		'ddns_https_target:or(".", hostname):.' \
 		'ddns_https_svcparams:string:alpn="h2,http/1.1"' \
 		'ddns_https_priority:range(1, 65535):1' \
-		'custom_script:file'
+		'custom_script:file' \
+		'log_stdout:bool:1' \
+		'log_stderr:bool:1'
 }
 
 # ip_match <family> <ipaddr>
@@ -231,8 +233,8 @@ natmap_instance() {
 	procd_append_param command -e /usr/lib/natmap/update.sh
 
 	procd_set_param respawn
-	procd_set_param stdout 1
-	procd_set_param stderr 1
+	procd_set_param stdout "$log_stdout"
+	procd_set_param stderr "$log_stderr"
 
 	procd_open_data
 	# configure firewall
