@@ -72,7 +72,7 @@ define_global() {
 	[ "$2" == "0" ] || { >&2 echo "$(basename $0): section $1 validation failed"; return 1; }
 
 	local error=0
-	local v ucivv="enable def_tcp_stun def_udp_stun def_http_server def_tcp_interval def_udp_interval"
+	local v ucivv="enable def_tcp_stun def_udp_stun def_http_server def_fwmark_value def_tcp_interval def_udp_interval"
 	for v in $ucivv; do
 		[ -z "$(config_get $1 $v)" ] && err_msg__empty $1 $v && let error++
 		config_get GLOBAL_$v $1 $v
@@ -87,6 +87,7 @@ validate_section_global() {
 		'def_tcp_stun:string' \
 		'def_udp_stun:string' \
 		'def_http_server:string' \
+		'def_fwmark_value:string' \
 		'def_tcp_interval:and(uinteger, min(1)):30' \
 		'def_udp_interval:and(uinteger, min(1)):15' \
 		'test_port:and(port, min(1))'
@@ -98,6 +99,7 @@ validate_section_natmap() {
 		'interval:and(uinteger, min(1))' \
 		'stun_server:string' \
 		'http_server:string' \
+		'fwmark_value:string' \
 		'comment:string' \
 		'udp_mode:bool:0' \
 		'family:or("ipv4", "ipv6"):ipv4' \
@@ -157,6 +159,11 @@ fe80:(:[[:xdigit:]]{0,4}){0,4}%\w+|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|2[0-4]\
 	esac
 }
 
+# fwmark_match <fwmark>
+fwmark_match() {
+	echo "$1" | grep -E '^(0|0x[[:xdigit:]]+|[1-9][0-9]*|0[0-7]+)$'
+}
+
 natmap_instance() {
 
 	procd_open_instance "$1"
@@ -164,6 +171,7 @@ natmap_instance() {
 		${interval:+-k "$interval"} \
 		${stun_server:+-s "$stun_server"} \
 		${http_server:+-h "$http_server"} \
+		${fwmark_value:+-f "$fwmark_value"} \
 		${port:+-b "$port"} \
 
 	[ "${family}" = ipv4 ] && procd_append_param command -4
@@ -298,6 +306,7 @@ launcher() {
 		&& echo ${stun_server:=$GLOBAL_def_udp_stun} ${interval:=$GLOBAL_def_udp_interval} >/dev/null \
 		|| echo ${stun_server:=$GLOBAL_def_tcp_stun} ${interval:=$GLOBAL_def_tcp_interval} >/dev/null
 	echo ${http_server:=$GLOBAL_def_http_server} >/dev/null
+	echo ${fwmark_value:=$GLOBAL_def_fwmark_value} >/dev/null
 	# natmap options
 	local error=0
 	local proto ifname bind_ip lan_addr
@@ -317,8 +326,9 @@ launcher() {
 			lan_addr="${NIC6_br_lan%/*}"
 		;;
 	esac
-	[ -z "$bind_ip" ] && >&2 echo "$(basename $0): section $1 bind_ip parsing failed, there may be no $family network connection" && let error++
+	[ -z "$bind_ip" ] && >&2 echo "$(basename $0): section $1 option bind_ip parsing failed, there may be no $family network connection" && let error++
 	[ -z "$port" ] && err_msg__empty $1 port && let error++
+	[ -z "$fwmark_value" -o -n "$(fwmark_match "$fwmark_value")" ] || { >&2 echo "$(basename $0): section $1 option fwmark_value '$fwmark_value' is invalid"; let error++; }
 	## forward
 	if   [ "$forward" = 1 ]; then
 		[ "$forward_mode" = "dnat" -a "$family" = "ipv6" ] && >&2 echo "$(basename $0): section $1 option forward_mode 'dnat' not support under IPv6" && let error++
@@ -359,7 +369,7 @@ launcher() {
 
 	# review
 	[ -n "$NATMAP_DEBUG" ] && {
-		local v ucivv="enable interval stun_server http_server comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_timeout forward_target forward_port refresh clt_script clt_scheme clt_web_port clt_username clt_password notify_enable notify_script notify_tokens notify_custom_domain notify_text ddns_enable ddns_script ddns_tokens ddns_a ddns_aaaa ddns_srv ddns_srv_serv ddns_srv_proto ddns_srv_target ddns_srv_priority ddns_srv_weight ddns_https ddns_https_target ddns_https_svcparams ddns_https_priority custom_script"
+		local v ucivv="enable interval stun_server http_server fwmark_value comment udp_mode proto family bind_ifname ifname bind_ip lan_addr port forward forward_mode natloopback forward_timeout forward_target forward_port refresh clt_script clt_scheme clt_web_port clt_username clt_password notify_enable notify_script notify_tokens notify_custom_domain notify_text ddns_enable ddns_script ddns_tokens ddns_a ddns_aaaa ddns_srv ddns_srv_serv ddns_srv_proto ddns_srv_target ddns_srv_priority ddns_srv_weight ddns_https ddns_https_target ddns_https_svcparams ddns_https_priority custom_script"
 		for v in $ucivv; do eval "echo $1 $v=\'\$$v\'"; done # ash not support ${!v}
 	}
 	[ "$error" -gt 0 ] && return 1
