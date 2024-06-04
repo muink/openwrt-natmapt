@@ -62,7 +62,7 @@ load_interfaces() {
 	local bind_ifname enable
 
 	config_get bind_ifname "$1" bind_ifname
-	config_get enable "$1" enable 0
+	config_get_bool enable "$1" enable 0
 
 	[ "$enable" = 1 ] && interfaces=" $(uci -q show network|grep "device='$bind_ifname'"|cut -f2 -d'.') $interfaces"
 }
