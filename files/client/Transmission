@@ -3,18 +3,18 @@
 #
 # Client listen port refresh script
 #
-# depends curl
+# depends 
 
 . /usr/lib/natmap/common.sh
 
 start() {
 	local retry='--connect-timeout 1 --retry 0'
 	scheme='http' # only supports http
-	local sid="$(curl $retry -L \
+	local sid="$($CURL $retry -L \
 		-u ${username}:${password} \
 		--url ${scheme}://${ip}:${web_port}/transmission/rpc \
 		| sed 's|.*<code>||g;s|</code>.*||g')"
-	curl $retry -L -X POST \
+	$CURL $retry -L -X POST \
 		-H "$sid" -u ${username}:${password} \
 		-d '{"method":"session-set","arguments":{"peer-port":"'"${port}"'"}}' \
 		--url ${scheme}://${ip}:${web_port}/transmission/rpc

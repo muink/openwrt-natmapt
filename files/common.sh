@@ -1,7 +1,9 @@
 #!/bin/bash
 # Copyright (C) 2023 muink https://github.com/muink
 #
-# depends jsonfilter
+# depends curl jsonfilter
+
+CURL="$(command -v natmap-curl)"
 
 # JSON_EXPORT <json>
 JSON_EXPORT() {

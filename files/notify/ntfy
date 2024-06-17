@@ -3,7 +3,7 @@
 #
 # Port update notify script
 #
-# depends curl
+# depends 
 
 . /usr/lib/natmap/common.sh
 . /usr/share/libubox/jshn.sh
@@ -11,7 +11,7 @@
 # http_request <data>
 http_request() {
 	local data="$1"
-	curl $retry -L -o /dev/null -X POST \
+	$CURL $retry -L -o /dev/null -X POST \
 		-H 'Content-Type: application/json' \
 		-d "$data" \
 		--url https://${custom_domain:-ntfy.sh}/

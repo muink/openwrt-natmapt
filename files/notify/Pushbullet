@@ -3,13 +3,13 @@
 #
 # Port update notify script
 #
-# depends curl
+# depends 
 
 . /usr/lib/natmap/common.sh
 
 start() {
 	local retry='--connect-timeout 3 --retry 3'
-	curl $retry -L -o /dev/null -X POST \
+	$CURL $retry -L -o /dev/null -X POST \
 		-H "Access-Token: ${TOKEN}" \
 		-H 'Content-Type: application/json' \
 		-d '{"type":"note","body":"'"${text}"'","title":"'"${TITLE}"'"}' \

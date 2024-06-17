@@ -3,13 +3,13 @@
 #
 # Client listen port refresh script
 #
-# depends curl jsonfilter
+# depends jsonfilter
 
 . /usr/lib/natmap/common.sh
 
 # http_request <cookie> <data>
 http_request() {
-	curl $retry --compressed -L -X POST \
+	$CURL $retry --compressed -L -X POST \
 		-b "$1" -H "Content-Type: application/json" \
 		-d "$2" \
 		--url ${scheme}://${ip}:${web_port}/json
@@ -17,7 +17,7 @@ http_request() {
 
 start() {
 	local retry='--connect-timeout 1 --retry 0'
-	local cookie="$(curl $retry --compressed -L -i \
+	local cookie="$($CURL $retry --compressed -L -i \
 		-H "Content-Type: application/json" \
 		-d '{"method": "auth.login", "params": ["'"${password}"'"], "id": 1}' \
 		--url ${scheme}://${ip}:${web_port}/json \
