@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=natmapt
 PKG_VERSION:=20240603
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 RAW_NAME:=natmap
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(RAW_NAME)-$(PKG_VERSION)
@@ -32,15 +32,6 @@ MAKE_FLAGS += REV_ID="$(PKG_VERSION)"
 
 define Package/natmapt/conffiles
 /etc/config/natmap
-endef
-
-define Package/natmapt/postinst
-#!/bin/sh
-if [ -z "$$IPKG_INSTROOT" ]; then
-	# system
-	ln -sf "$$(command -v curl)" /usr/bin/natmap-curl
-fi
-exit 0
 endef
 
 define Package/natmapt/prerm

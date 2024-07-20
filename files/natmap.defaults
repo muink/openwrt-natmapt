@@ -27,3 +27,6 @@ else
 ## def_interval --> def_tcp_interval/def_udp_interval
 sed -Ei 's|def_interval (.*)|def_tcp_interval \1\n\toption def_udp_interval \1|' "$CONF"
 fi
+# gen natmap-curl
+ln -sf "$(command -v curl)" /usr/bin/natmap-curl
+exit 0
