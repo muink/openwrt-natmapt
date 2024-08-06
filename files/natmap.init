@@ -291,8 +291,19 @@ natmap_instance() {
 }
 
 clear_status_files() {
+	local f sid="$1"
+
 	mkdir -p "${STATUS_PATH}" 2>/dev/null
-	find "${STATUS_PATH}" -type f -print0 | xargs -0 rm -f --
+	pushd "${STATUS_PATH}" >/dev/null
+	if [ -n "$sid" ]; then
+		for f in *.json; do
+			[ "$(jsonfilter -q -i $f -e '@.sid')" = "$sid" ] || continue
+			rm -f $f; break
+		done
+	else
+		find * -type f -print0 | xargs -0 rm -f --
+	fi
+	popd >/dev/null
 }
 
 # err_msg__empty <section> <option>
@@ -416,6 +427,7 @@ start_service() {
 	[ "${GLOBAL_enable:=0}" == "0" ] && return 1
 
 	if [ -n "$sid" ]; then
+		clear_status_files "$sid"
 		validate_section_natmap "$sid" launcher
 	else
 		clear_status_files
@@ -423,14 +435,16 @@ start_service() {
 	fi
 }
 
+stop_service() {
+	local sid="$1"
+	clear_status_files "$sid"
+}
+
 reload_service() {
-	stop
-	start
+	stop "$@"
+	start "$@"
 }
 
 service_started() { procd_set_config_changed firewall; }
 
-service_stopped() {
-	clear_status_files
-	procd_set_config_changed firewall
-}
+service_stopped() { procd_set_config_changed firewall; }
