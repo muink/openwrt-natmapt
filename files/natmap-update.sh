@@ -9,11 +9,25 @@ shift 6
 
 . /usr/share/libubox/jshn.sh
 INITD='/etc/init.d/natmap'
+STATUS_PATH='/var/run/natmap'
 
 if [ -n "$RWFW" -a "$($INITD info|jsonfilter -qe "@['$(basename $INITD)'].instances['$SECTIONID'].data.firewall[0].dest_port")" != "$port" ]; then
 	export PUBPORT="$port" #PROCD_DEBUG=1
 	$INITD start "$SECTIONID"
 fi
+(
+	json_init
+	json_add_string sid "$SECTIONID"
+	json_add_string comment "$COMMENT"
+	json_add_string ip "$ip"
+	json_add_int port "$port"
+	json_add_string ip4p "$ip4p"
+	json_add_int inner_port "$inner_port"
+	json_add_string protocol "$protocol"
+	json_add_string inner_ip "$inner_ip"
+	json_dump > "$STATUS_PATH/$PPID.json"
+)
+
 if [ -n "$REFRESH" ]; then
 	json_init
 	json_load "$REFRESH_PARAM"
@@ -49,19 +63,6 @@ if [ -n "$DDNS" ]; then
 	json_add_int port "$port"
 	$DDNS "$(json_dump)"
 fi
-
-(
-	json_init
-	json_add_string sid "$SECTIONID"
-	json_add_string comment "$COMMENT"
-	json_add_string ip "$ip"
-	json_add_int port "$port"
-	json_add_string ip4p "$ip4p"
-	json_add_int inner_port "$inner_port"
-	json_add_string protocol "$protocol"
-	json_add_string inner_ip "$inner_ip"
-	json_dump > /var/run/natmap/$PPID.json
-)
 
 [ -n "${CUSTOM_SCRIPT}" ] && {
 	export -n CUSTOM_SCRIPT
