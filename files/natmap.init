@@ -107,7 +107,7 @@ validate_section_natmap() {
 		'udp_mode:bool:0' \
 		'family:or("ipv4", "ipv6"):ipv4' \
 		'bind_ifname:network' \
-		'port:and(port, min(1))' \
+		'port:or(port, portrange)' \
 		'forward:bool:0' \
 		'forward_mode:or("dnat", "via"):via' \
 		'natloopback:bool:1' \
@@ -345,6 +345,7 @@ launcher() {
 	esac
 	[ -z "$bind_ip" ] && >&2 echo "$(basename $0): section $1 option bind_ip parsing failed, there may be no $family network connection" && let error++
 	[ -z "$port" ] && err_msg__empty $1 port && let error++
+	grep -qE '^([1-9]\d*)(-([1-9]\d*))*$' <<< "$port" || { >&2 echo "$(basename $0): section $1 option port '$port' is invalid"; let error++; }
 	[ -z "$fwmark_value" -o -n "$(fwmark_match "$fwmark_value")" ] || { >&2 echo "$(basename $0): section $1 option fwmark_value '$fwmark_value' is invalid"; let error++; }
 	## forward
 	if   [ "$forward" = 1 ]; then
