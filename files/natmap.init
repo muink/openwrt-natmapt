@@ -78,7 +78,7 @@ define_global() {
 			err_msg__empty $1 $v
 			let error++
 		}
-		config_get GLOBAL_$v $1 $v
+		eval "GLOBAL_$v=\$$v"
 	done
 
 	[ "$error" -gt 0 ] && return 1 || return 0
@@ -323,14 +323,15 @@ launcher() {
 		local interval=${interval:-$GLOBAL_def_udp_interval} \
 			stun_cycle=${stun_cycle:-$GLOBAL_def_udp_stun_cycle} \
 			stun_server=${stun_server:-$GLOBAL_def_udp_stun} \
+			http_server='' \
 		;
 	else
 		local interval=${interval:-$GLOBAL_def_tcp_interval} \
 			stun_cycle='' \
 			stun_server=${stun_server:-$GLOBAL_def_tcp_stun} \
+			http_server=${http_server:-$GLOBAL_def_http_server} \
 		;
 	fi
-	local http_server=${http_server:-$GLOBAL_def_http_server}
 	local fwmark_value=${fwmark_value:-$GLOBAL_def_fwmark_value}
 	# natmap options
 	local error=0
