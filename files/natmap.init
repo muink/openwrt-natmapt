@@ -450,6 +450,12 @@ stop_service() {
 	clear_status_files "$sid"
 }
 
+service_stopped() {
+	sleep 1s # Wait for procd_kill complete
+
+	ps | grep natmap | awk '{print $1}' | xargs kill -9 
+}
+
 reload_service() {
 	stop "$@"
 	start "$@"
