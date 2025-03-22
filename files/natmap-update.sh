@@ -11,6 +11,18 @@ shift 6
 INITD='/etc/init.d/natmap'
 STATUS_PATH='/var/run/natmap'
 
+# fallloop <retry time> <func> [args...]
+fallloop() {
+	local retry="$1"; shift
+	local limit="$1"; shift
+	local func="$1"; shift
+
+	local error=1 count=0 && until [ $error = 0 -o $count -ge $limit ]; do
+		$func "$@" && error=0 || error=$?
+		let count++ && sleep $retry
+	done
+}
+
 if [ -n "$RWFW" -a "$($INITD info|jsonfilter -qe "@['$(basename $INITD)'].instances['$SECTIONID'].data.firewall[0].dest_port")" != "$port" ]; then
 	export PUBPORT="$port" #PROCD_DEBUG=1
 	$INITD start "$SECTIONID"
@@ -48,7 +60,7 @@ if [ -n "$NOTIFY" ]; then
 	json_load "$NOTIFY_PARAM"
 	json_add_string comment "$COMMENT"
 	json_add_string text "$_text"
-	$NOTIFY "$(json_dump)" &
+	fallloop 5m 4 $NOTIFY "$(json_dump)" &
 fi
 if [ -n "$DDNS" ]; then
 	_hostype="$(jsonfilter -qs "$DDNS_PARAM" -e '@["hostype"]')"
@@ -61,7 +73,7 @@ if [ -n "$DDNS" ]; then
 	json_add_string https_svcparams "$_svcparams"
 	json_add_string ip "$ip"
 	json_add_int port "$port"
-	$DDNS "$(json_dump)" &
+	fallloop 5m 4 $DDNS "$(json_dump)" &
 fi
 
 [ -n "${CUSTOM_SCRIPT}" ] && {
