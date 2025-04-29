@@ -74,6 +74,7 @@ define Package/natmapt/install
 	$(INSTALL_BIN) ./files/natmap.defaults $(1)/etc/uci-defaults/97_natmap
 	$(INSTALL_DIR) $(1)/etc/natmap/client
 	$(INSTALL_BIN) ./files/client/qBittorrent $(1)/etc/natmap/client/
+	$(LN)          ./files/client/qBittorrent $(1)/etc/natmap/client/qBittorrent-announce_port
 	$(INSTALL_DIR) $(1)/etc/natmap/notify
 	$(INSTALL_BIN) ./files/notify/ntfy $(1)/etc/natmap/notify/
 	$(INSTALL_DIR) $(1)/etc/natmap/ddns
