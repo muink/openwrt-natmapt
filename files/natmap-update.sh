@@ -46,6 +46,19 @@ if [ -n "$REFRESH" ]; then
 	json_add_int port "$port"
 	$REFRESH "$(json_dump)"
 fi
+
+STATUS_CACHE="/tmp/natmap-notify-status-${SECTIONID}.txt"
+CURRENT_STATUS="${ip}:${port}:${ip4p}:${inner_port}:${protocol}:${inner_ip}"
+
+if [ -n "$NOTIFY" ]; then
+	if [ -f "$STATUS_CACHE" ]; then
+		LAST_STATUS="$(cat "$STATUS_CACHE")"
+		if [ "$LAST_STATUS" = "$CURRENT_STATUS" ]; then
+  			logger "natmap[$SECTIONID]: Status unchanged, skip notify"
+			unset NOTIFY
+		fi
+	fi
+fi
 if [ -n "$NOTIFY" ]; then
 	_text="$(jsonfilter -qs "$NOTIFY_PARAM" -e '@["text"]')"
 	[ -z "$_text" ] && _text="NATMap: ${COMMENT:+$COMMENT: }[${protocol^^}] $inner_ip:$inner_port -> $ip:$port" \
@@ -61,6 +74,7 @@ if [ -n "$NOTIFY" ]; then
 	json_add_string comment "$COMMENT"
 	json_add_string text "$_text"
 	fallloop 5m 4 $NOTIFY "$(json_dump)" &
+ 	logger "$CURRENT_STATUS" > "$STATUS_CACHE"
 fi
 if [ -n "$DDNS" ]; then
 	_hostype="$(jsonfilter -qs "$DDNS_PARAM" -e '@["hostype"]')"
