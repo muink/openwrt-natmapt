@@ -450,6 +450,15 @@ service_triggers() {
 	procd_add_validation validate_section_natmap
 }
 
+boot() {
+	local boot_delay
+
+	config_get boot_delay "$GLOBALSECTION" boot_delay 0
+
+    sleep $boot_delay
+	start "$@"
+}
+
 start_service() {
 	local sid="$1"
 
