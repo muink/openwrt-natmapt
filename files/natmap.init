@@ -451,11 +451,10 @@ service_triggers() {
 }
 
 boot() {
-	local boot_delay
+	sleep $(uci -q get $NAME.@$GLOBALSECTION[0].boot_delay || echo 0)
 
-	config_get boot_delay "$GLOBALSECTION" boot_delay 0
-
-    sleep $boot_delay
+	network_flush_cache
+	define_nic
 	start "$@"
 }
 
